@@ -27,3 +27,15 @@ Demand forecasting application with:
 - `GET /api/v1/forecasts/accuracy`
 - `GET /api/v1/ml/health`
 - `GET /api/v1/ml/model-info`
+
+## Supply chain planning APIs
+
+- `POST /api/v1/planning/replenishment`
+- `POST /api/v1/planning/purchase-plan`
+- `GET /api/v1/planning/exceptions`
+
+Planning APIs are designed for multi-product and multi-warehouse inputs. They include:
+- safety stock calculation
+- reorder point and target stock logic
+- demand variability analysis
+- stockout and overstock risk detection

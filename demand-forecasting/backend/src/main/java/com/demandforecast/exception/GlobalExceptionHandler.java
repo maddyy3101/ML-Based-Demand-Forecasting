@@ -5,10 +5,12 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import java.time.Instant;
 import java.util.List;
 
@@ -34,6 +36,20 @@ public class GlobalExceptionHandler {
         String msg = String.format("Parameter '%s' should be of type %s", ex.getName(),
                 ex.getRequiredType() != null ? ex.getRequiredType().getSimpleName() : "unknown");
         return build(HttpStatus.BAD_REQUEST, "Type Mismatch", msg, request, null, null);
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ApiError> handleUnsupportedMediaType(
+            HttpMediaTypeNotSupportedException ex, HttpServletRequest request) {
+        String msg = "Unsupported Content-Type. Use 'application/json'.";
+        return build(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "Unsupported Media Type", msg, request, null, null);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiError> handleMalformedJson(
+            HttpMessageNotReadableException ex, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, "Malformed JSON",
+            "Request body must be valid JSON matching the API schema.", request, null, null);
     }
 
     @ExceptionHandler(PredictionNotFoundException.class)
@@ -84,6 +100,13 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handleBacktestInput(
             InvalidBacktestRequestException ex, HttpServletRequest request) {
         return build(HttpStatus.UNPROCESSABLE_ENTITY, "Invalid Backtest Request", ex.getMessage(),
+            request, ex.getErrorCode(), null);
+    }
+
+    @ExceptionHandler(PlanningInputException.class)
+    public ResponseEntity<ApiError> handlePlanningInput(
+            PlanningInputException ex, HttpServletRequest request) {
+        return build(HttpStatus.UNPROCESSABLE_ENTITY, "Planning Input Error", ex.getMessage(),
             request, ex.getErrorCode(), null);
     }
 
