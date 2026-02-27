@@ -1,0 +1,73 @@
+spring:
+  application:
+    name: demand-forecast
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+  jackson:
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: false
+server:
+  port: 8080
+  error:
+    include-message: always
+    include-binding-errors: always
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+ml:
+  api:
+    base-url: ${ML_API_BASE_URL:http://localhost:5000}
+    timeout-seconds: 10
+    max-batch-size: 256
+logging:
+  level:
+    com.demandforecast: INFO
+    org.springframework.web: WARN
+---
+spring:
+  config:
+    activate:
+      on-profile: local
+  datasource:
+    url: jdbc:postgresql://localhost:5432/demandforecast
+    username: postgres
+    password: postgres
+---
+spring:
+  config:
+    activate:
+      on-profile: docker
+  datasource:
+    url: jdbc:postgresql://postgres:5432/demandforecast
+    username: ${POSTGRES_USER:postgres}
+    password: ${POSTGRES_PASSWORD:postgres}
+---
+spring:
+  config:
+    activate:
+      on-profile: test
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    database-platform: org.hibernate.dialect.H2Dialect
+ml:
+  api:
+    base-url: http://localhost:9090
