@@ -56,6 +56,12 @@ public class PredictionRecord {
     @Column(name = "predicted_demand", nullable = false)
     private double predictedDemand;
 
+    @Column(name = "lower_bound")
+    private Double lowerBound;
+
+    @Column(name = "upper_bound")
+    private Double upperBound;
+
     @Column(name = "actual_demand")
     private Double actualDemand;
 

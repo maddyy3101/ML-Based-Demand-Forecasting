@@ -49,13 +49,21 @@ class ForecastControllerIntegrationTest {
     }
 
     private void stubMlPredict(double demand) {
+        double lower = Math.round((demand - 12.5) * 100.0) / 100.0;
+        double upper = Math.round((demand + 12.5) * 100.0) / 100.0;
         stubFor(post(urlEqualTo("/predict")).willReturn(aResponse()
             .withHeader("Content-Type", "application/json")
-            .withBody("{\"demand\": " + demand + ", \"status\": \"ok\", \"request_id\": \"test\"}")));
+            .withBody("{\"demand\": " + demand + ", \"lower_bound\": " + lower +
+                ", \"upper_bound\": " + upper + ", \"status\": \"ok\", \"request_id\": \"test\"}")));
     }
 
     private void stubMlPredictBatch(List<Double> demands) {
-        String items = demands.stream().map(d -> "{\"demand\": " + d + ", \"status\": \"ok\"}")
+        String items = demands.stream().map(d -> {
+            double lower = Math.round((d - 12.5) * 100.0) / 100.0;
+            double upper = Math.round((d + 12.5) * 100.0) / 100.0;
+            return "{\"demand\": " + d + ", \"lower_bound\": " + lower +
+                ", \"upper_bound\": " + upper + ", \"status\": \"ok\"}";
+        })
             .collect(Collectors.joining(",", "[", "]"));
         stubFor(post(urlEqualTo("/predict/batch")).willReturn(aResponse()
             .withHeader("Content-Type", "application/json").withBody(items)));
@@ -67,6 +75,7 @@ class ForecastControllerIntegrationTest {
         ResponseEntity<Map> resp = restTemplate.postForEntity("/api/v1/forecasts", validRequest(), Map.class);
         assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(((Number) resp.getBody().get("demand")).doubleValue()).isEqualTo(142.5);
+        assertThat(resp.getBody()).containsKeys("lowerBound", "upperBound");
         assertThat(resp.getBody()).containsKey("predictionId");
     }
 

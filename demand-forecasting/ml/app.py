@@ -9,10 +9,9 @@ import numpy as np
 import pandas as pd
 import joblib
 
-from datetime import datetime
 from functools import lru_cache
 from flask import Flask, request, jsonify, g
-from marshmallow import Schema, fields, ValidationError, validates, validate
+from marshmallow import Schema, fields, ValidationError, validate
 
 logging.basicConfig(
     level=logging.INFO,
@@ -26,11 +25,13 @@ MODEL_DIR = os.getenv("MODEL_DIR", "models")
 @lru_cache(maxsize=1)
 def load_artifacts():
     logger.info(f"Loading artifacts from {MODEL_DIR}")
+    interval_path = os.path.join(MODEL_DIR, "prediction_interval.pkl")
     return {
         "model":         joblib.load(os.path.join(MODEL_DIR, "best_model.pkl")),
         "scaler":        joblib.load(os.path.join(MODEL_DIR, "scaler.pkl")),
         "le_map":        joblib.load(os.path.join(MODEL_DIR, "label_encoders.pkl")),
         "feature_names": joblib.load(os.path.join(MODEL_DIR, "feature_names.pkl")),
+        "prediction_interval": joblib.load(interval_path) if os.path.exists(interval_path) else None,
     }
 
 VALID_CATEGORIES  = ["Electronics", "Clothing", "Furniture", "Groceries", "Toys"]
@@ -97,6 +98,20 @@ def preprocess_input(data: dict, artifacts: dict) -> np.ndarray:
     return df_row.values
 
 
+def prediction_with_interval(raw_pred: float, artifacts: dict) -> dict:
+    pred = float(raw_pred)
+    interval = artifacts.get("prediction_interval")
+    if not interval:
+        return {"demand": round(pred, 2)}
+    lower = pred + float(interval["lower_residual_q"])
+    upper = pred + float(interval["upper_residual_q"])
+    return {
+        "demand": round(pred, 2),
+        "lower_bound": round(min(lower, upper), 2),
+        "upper_bound": round(max(lower, upper), 2),
+    }
+
+
 def create_app() -> Flask:
     app = Flask(__name__)
     app.config["MAX_BATCH_SIZE"] = int(os.getenv("MAX_BATCH_SIZE", 256))
@@ -132,8 +147,12 @@ def create_app() -> Flask:
     @app.get("/health")
     def health():
         model = artifacts["model"]
-        return jsonify({"status": "ok", "model_type": type(model).__name__,
-                        "request_id": g.request_id})
+        return jsonify({
+            "status": "ok",
+            "model_type": type(model).__name__,
+            "has_prediction_interval": artifacts.get("prediction_interval") is not None,
+            "request_id": g.request_id
+        })
 
     @app.get("/model/info")
     def model_info():
@@ -143,6 +162,10 @@ def create_app() -> Flask:
             "feature_names": artifacts["feature_names"],
             "n_features":    len(artifacts["feature_names"]),
         }
+        if artifacts.get("prediction_interval"):
+            info["prediction_interval"] = {
+                "coverage": artifacts["prediction_interval"]["coverage"]
+            }
         if hasattr(model, "n_estimators"):
             info["n_estimators"] = model.n_estimators
         return jsonify(info)
@@ -159,7 +182,9 @@ def create_app() -> Flask:
         X = preprocess_input(data, artifacts)
         pred = float(artifacts["model"].predict(X)[0])
         logger.info(f"predict | request_id={g.request_id} | demand={pred:.2f}")
-        return jsonify({"demand": round(pred, 2), "request_id": g.request_id})
+        body = prediction_with_interval(pred, artifacts)
+        body["request_id"] = g.request_id
+        return jsonify(body)
 
     @app.post("/predict/batch")
     def predict_batch():
@@ -182,7 +207,9 @@ def create_app() -> Flask:
             X_batch = np.vstack(rows)
             preds   = artifacts["model"].predict(X_batch)
             for idx, pred in zip(valid_indices, preds):
-                results[idx] = {"demand": round(float(pred), 2), "status": "ok"}
+                result = prediction_with_interval(float(pred), artifacts)
+                result["status"] = "ok"
+                results[idx] = result
         logger.info(f"batch_predict | request_id={g.request_id} | n={len(raw)} | valid={len(valid_indices)}")
         return jsonify(results)
 

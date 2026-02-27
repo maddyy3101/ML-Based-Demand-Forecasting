@@ -24,6 +24,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -53,7 +54,7 @@ public class MlApiClient {
         log.info("MlApiClient initialised → {}", baseUrl);
     }
 
-    public Mono<Double> predict(MlPredictPayload payload, String requestId) {
+    public Mono<MlPredictResult> predict(MlPredictPayload payload, String requestId) {
         return webClient.post().uri("/predict")
             .header("X-Request-ID", requestId)
             .bodyValue(buildBody(payload))
@@ -63,22 +64,24 @@ public class MlApiClient {
             .onStatus(HttpStatusCode::is5xxServerError, resp ->
                 resp.bodyToMono(String.class).map(b -> new MlApiUnavailableException(new RuntimeException(b))))
             .bodyToMono(JsonNode.class)
-            .map(json -> json.get("demand").asDouble())
+            .map(this::toPredictResult)
             .retryWhen(Retry.backoff(2, Duration.ofMillis(300))
                 .filter(ex -> ex instanceof WebClientRequestException)
                 .onRetryExhaustedThrow((spec, sig) -> new MlApiUnavailableException(sig.failure())))
             .onErrorMap(WebClientRequestException.class, MlApiUnavailableException::new);
     }
 
-    public Mono<List<Double>> predictBatch(List<MlPredictPayload> payloads, String requestId) {
+    public Mono<List<MlPredictResult>> predictBatch(List<MlPredictPayload> payloads, String requestId) {
         return webClient.post().uri("/predict/batch")
             .header("X-Request-ID", requestId)
             .bodyValue(payloads.stream().map(this::buildBody).toList())
             .retrieve()
+            .onStatus(HttpStatusCode::is4xxClientError, resp ->
+                resp.bodyToMono(String.class).map(b -> new MlApiException("ML API rejected batch request (4xx): " + b)))
             .onStatus(HttpStatusCode::is5xxServerError, resp ->
                 resp.bodyToMono(String.class).map(b -> new MlApiUnavailableException(new RuntimeException(b))))
             .bodyToFlux(JsonNode.class)
-            .map(item -> item.get("demand").asDouble())
+            .map(this::toPredictResult)
             .collectList();
     }
 
@@ -93,6 +96,21 @@ public class MlApiClient {
         return webClient.get().uri("/feature-importance").retrieve()
             .bodyToFlux(JsonNode.class)
             .collectMap(n -> n.get("feature").asText(), n -> n.get("importance").asDouble());
+    }
+
+    private MlPredictResult toPredictResult(JsonNode json) {
+        if (json == null || !json.hasNonNull("demand")) {
+            throw new MlApiException("ML API response missing 'demand': " + String.valueOf(json));
+        }
+        double demand = json.get("demand").asDouble();
+        Double lower = readOptionalDouble(json, "lower_bound");
+        Double upper = readOptionalDouble(json, "upper_bound");
+        return new MlPredictResult(demand, lower, upper);
+    }
+
+    private Double readOptionalDouble(JsonNode json, String key) {
+        JsonNode node = json.get(key);
+        return (node == null || node.isNull()) ? null : node.asDouble();
     }
 
     private ObjectNode buildBody(MlPredictPayload p) {
@@ -120,4 +138,14 @@ public class MlApiClient {
         boolean promotion, double competitorPricing,
         String seasonality, boolean epidemic
     ) {}
+
+    public record MlPredictResult(double demand, Double lowerBound, Double upperBound) {
+        public MlPredictResult {
+            if (Objects.nonNull(lowerBound) && Objects.nonNull(upperBound) && lowerBound > upperBound) {
+                double temp = lowerBound;
+                lowerBound = upperBound;
+                upperBound = temp;
+            }
+        }
+    }
 }

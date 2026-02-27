@@ -13,6 +13,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
@@ -38,6 +39,7 @@ class ForecastServiceTest {
 
     @BeforeEach
     void setUp() {
+        ReflectionTestUtils.setField(service, "maxBatchSize", 256);
         validRequest = ForecastRequest.builder()
             .date(LocalDate.of(2025, 6, 15)).category("Electronics").region("North")
             .inventoryLevel(150).unitsSold(80).unitsOrdered(200).price(72.5).discount(10.0)
@@ -49,19 +51,23 @@ class ForecastServiceTest {
         return PredictionRecord.builder().id(UUID.randomUUID())
             .forecastDate(validRequest.getDate()).category(validRequest.getCategory())
             .region(validRequest.getRegion()).predictedDemand(demand)
+            .lowerBound(demand - 12.5).upperBound(demand + 12.5)
             .createdAt(Instant.now()).requestId("req-123").build();
     }
 
     @Test
     void forecast_callsMlApiAndPersists() {
         PredictionRecord record = savedRecord(142.5);
-        when(mlApiClient.predict(any(), anyString())).thenReturn(Mono.just(142.5));
+        when(mlApiClient.predict(any(), anyString()))
+            .thenReturn(Mono.just(new MlApiClient.MlPredictResult(142.5, 130.0, 155.0)));
         when(repository.save(any())).thenReturn(record);
         StepVerifier.create(service.forecast(validRequest, "req-123"))
             .assertNext(resp -> {
                 assertThat(resp.getDemand()).isEqualTo(142.5);
                 assertThat(resp.getCategory()).isEqualTo("Electronics");
                 assertThat(resp.getPredictionId()).isNotNull();
+                assertThat(resp.getLowerBound()).isEqualTo(130.0);
+                assertThat(resp.getUpperBound()).isEqualTo(155.0);
             }).verifyComplete();
         verify(mlApiClient, times(1)).predict(any(), eq("req-123"));
         verify(repository, times(1)).save(any());
@@ -77,7 +83,10 @@ class ForecastServiceTest {
 
     @Test
     void forecastBatch_returnsCorrectCount() {
-        when(mlApiClient.predictBatch(anyList(), anyString())).thenReturn(Mono.just(List.of(100.0, 200.0)));
+        when(mlApiClient.predictBatch(anyList(), anyString())).thenReturn(Mono.just(List.of(
+            new MlApiClient.MlPredictResult(100.0, 90.0, 110.0),
+            new MlApiClient.MlPredictResult(200.0, 180.0, 220.0)
+        )));
         when(repository.save(any())).thenAnswer(inv -> {
             PredictionRecord r = inv.getArgument(0);
             return PredictionRecord.builder().id(UUID.randomUUID())

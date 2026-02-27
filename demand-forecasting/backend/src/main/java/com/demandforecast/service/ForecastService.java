@@ -35,9 +35,10 @@ public class ForecastService {
     @Transactional
     public Mono<ForecastResponse> forecast(ForecastRequest req, String requestId) {
         return mlApiClient.predict(toPayload(req), requestId)
-            .map(demand -> {
-                PredictionRecord saved = persist(req, demand, requestId);
-                log.info("Forecast saved | id={} | demand={} | requestId={}", saved.getId(), demand, requestId);
+            .map(prediction -> {
+                PredictionRecord saved = persist(req, prediction, requestId);
+                log.info("Forecast saved | id={} | demand={} | requestId={}",
+                         saved.getId(), prediction.demand(), requestId);
                 return toResponse(saved, requestId);
             });
     }
@@ -48,12 +49,12 @@ public class ForecastService {
             throw new BatchSizeExceededException(requests.size(), maxBatchSize);
         }
         return mlApiClient.predictBatch(requests.stream().map(this::toPayload).toList(), requestId)
-            .map(demands -> {
+            .map(predictions -> {
                 List<ForecastResponse> responses = new ArrayList<>();
                 for (int i = 0; i < requests.size(); i++) {
-                    responses.add(toResponse(persist(requests.get(i), demands.get(i), requestId), requestId));
+                    responses.add(toResponse(persist(requests.get(i), predictions.get(i), requestId), requestId));
                 }
-                log.info("Batch forecast saved | count={} | requestId={}", demands.size(), requestId);
+                log.info("Batch forecast saved | count={} | requestId={}", predictions.size(), requestId);
                 return responses;
             });
     }
@@ -74,14 +75,18 @@ public class ForecastService {
         return toResponse(saved, saved.getRequestId());
     }
 
-    private PredictionRecord persist(ForecastRequest req, double demand, String requestId) {
+    private PredictionRecord persist(ForecastRequest req, MlApiClient.MlPredictResult prediction, String requestId) {
         return repository.save(PredictionRecord.builder()
             .forecastDate(req.getDate()).category(req.getCategory()).region(req.getRegion())
             .inventoryLevel(req.getInventoryLevel()).unitsOrdered(req.getUnitsOrdered())
             .price(req.getPrice()).discount(req.getDiscount())
             .weatherCondition(req.getWeatherCondition()).promotion(req.isPromotion())
             .competitorPricing(req.getCompetitorPricing()).seasonality(req.getSeasonality())
-            .epidemic(req.isEpidemic()).predictedDemand(demand).requestId(requestId).build());
+            .epidemic(req.isEpidemic())
+            .predictedDemand(prediction.demand())
+            .lowerBound(prediction.lowerBound())
+            .upperBound(prediction.upperBound())
+            .requestId(requestId).build());
     }
 
     private MlApiClient.MlPredictPayload toPayload(ForecastRequest req) {
@@ -96,6 +101,7 @@ public class ForecastService {
     private ForecastResponse toResponse(PredictionRecord r, String requestId) {
         return ForecastResponse.builder()
             .predictionId(r.getId()).demand(r.getPredictedDemand())
+            .lowerBound(r.getLowerBound()).upperBound(r.getUpperBound())
             .forecastDate(r.getForecastDate()).category(r.getCategory()).region(r.getRegion())
             .createdAt(r.getCreatedAt() != null ? r.getCreatedAt() : Instant.now())
             .requestId(requestId).build();

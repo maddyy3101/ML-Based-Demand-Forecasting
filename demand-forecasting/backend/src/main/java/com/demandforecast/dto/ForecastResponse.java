@@ -12,6 +12,8 @@ import java.util.UUID;
 public class ForecastResponse {
     UUID   predictionId;
     double demand;
+    Double lowerBound;
+    Double upperBound;
     @JsonFormat(pattern = "yyyy-MM-dd", timezone = "UTC")
     LocalDate forecastDate;
     String category;

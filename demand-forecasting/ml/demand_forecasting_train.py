@@ -163,11 +163,30 @@ def plot_feature_importance(model, feature_names: list, title: str = "Feature Im
     print(fi_df.to_string(index=False))
 
 
-def save_artifacts(model, scaler, le_map: dict, feature_names: list):
+def build_prediction_interval(model, X_cal, y_cal, coverage: float = 0.90) -> dict:
+    alpha = 1.0 - coverage
+    preds = model.predict(X_cal)
+    residuals = y_cal - preds
+    lower_q = float(np.quantile(residuals, alpha / 2))
+    upper_q = float(np.quantile(residuals, 1 - alpha / 2))
+    info = {
+        "coverage": coverage,
+        "lower_residual_q": lower_q,
+        "upper_residual_q": upper_q,
+    }
+    print(
+        f"[interval] coverage={coverage:.2f} "
+        f"lower_residual_q={lower_q:.4f} upper_residual_q={upper_q:.4f}"
+    )
+    return info
+
+
+def save_artifacts(model, scaler, le_map: dict, feature_names: list, prediction_interval: dict):
     joblib.dump(model,         os.path.join(MODEL_DIR, "best_model.pkl"))
     joblib.dump(scaler,        os.path.join(MODEL_DIR, "scaler.pkl"))
     joblib.dump(le_map,        os.path.join(MODEL_DIR, "label_encoders.pkl"))
     joblib.dump(feature_names, os.path.join(MODEL_DIR, "feature_names.pkl"))
+    joblib.dump(prediction_interval, os.path.join(MODEL_DIR, "prediction_interval.pkl"))
     print(f"\n[save] All artifacts saved to ./{MODEL_DIR}/")
 
 
@@ -209,7 +228,10 @@ def main():
         plot_feature_importance(best_model, feature_names,
                                 title=f"{best_name} — Feature Importance")
 
-    save_artifacts(best_model, scaler, le_map, feature_names)
+    # Keep calibration features aligned with how each model was trained.
+    interval_X = X_test_sc if isinstance(best_model, LinearRegression) else X_test
+    prediction_interval = build_prediction_interval(best_model, interval_X, y_test.to_numpy())
+    save_artifacts(best_model, scaler, le_map, feature_names, prediction_interval)
     print("\n✅ Pipeline complete.")
 
 
