@@ -124,4 +124,33 @@ class ForecastServiceTest {
             .isInstanceOf(PredictionNotFoundException.class)
             .hasMessageContaining(id.toString());
     }
+
+    @Test
+    void getAccuracyMetrics_emptyData_returnsZeroSample() {
+        when(repository.findAccuracyRecords(any(), any(), any(), any())).thenReturn(List.of());
+
+        var resp = service.getAccuracyMetrics("Electronics", "North",
+            LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 31));
+
+        assertThat(resp.getSampleCount()).isZero();
+        assertThat(resp.getMae()).isNull();
+        assertThat(resp.getRmse()).isNull();
+        assertThat(resp.getMape()).isNull();
+    }
+
+    @Test
+    void getAccuracyMetrics_computesMaeRmseMape() {
+        PredictionRecord r1 = PredictionRecord.builder()
+            .predictedDemand(110.0).actualDemand(100.0).build();
+        PredictionRecord r2 = PredictionRecord.builder()
+            .predictedDemand(90.0).actualDemand(100.0).build();
+        when(repository.findAccuracyRecords(any(), any(), any(), any())).thenReturn(List.of(r1, r2));
+
+        var resp = service.getAccuracyMetrics(null, null, null, null);
+
+        assertThat(resp.getSampleCount()).isEqualTo(2);
+        assertThat(resp.getMae()).isEqualTo(10.0);
+        assertThat(resp.getRmse()).isEqualTo(10.0);
+        assertThat(resp.getMape()).isEqualTo(10.0);
+    }
 }

@@ -32,10 +32,21 @@ ml:
     base-url: ${ML_API_BASE_URL:http://localhost:5000}
     timeout-seconds: 10
     max-batch-size: 256
+security:
+  api-key:
+    enabled: ${API_KEY_ENABLED:false}
+    header: X-API-Key
+    values: ${API_KEYS:}
+  rate-limit:
+    enabled: ${RATE_LIMIT_ENABLED:false}
+    requests-per-minute: ${RATE_LIMIT_RPM:120}
 logging:
   level:
     com.demandforecast: INFO
     org.springframework.web: WARN
+jobs:
+  pool-size: ${ASYNC_JOBS_POOL_SIZE:4}
+  max-retained: ${ASYNC_JOBS_MAX_RETAINED:1000}
 ---
 spring:
   config:

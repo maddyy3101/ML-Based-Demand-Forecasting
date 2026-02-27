@@ -43,6 +43,13 @@ public class GlobalExceptionHandler {
                      request, ex.getErrorCode(), null);
     }
 
+    @ExceptionHandler(JobNotFoundException.class)
+    public ResponseEntity<ApiError> handleJobNotFound(
+            JobNotFoundException ex, HttpServletRequest request) {
+        return build(HttpStatus.NOT_FOUND, "Not Found", ex.getMessage(),
+            request, ex.getErrorCode(), null);
+    }
+
     @ExceptionHandler(BatchSizeExceededException.class)
     public ResponseEntity<ApiError> handleBatchTooLarge(
             BatchSizeExceededException ex, HttpServletRequest request) {
@@ -64,6 +71,20 @@ public class GlobalExceptionHandler {
         log.error("ML API error: {}", ex.getMessage());
         return build(HttpStatus.BAD_GATEWAY, "ML Service Error",
                      ex.getMessage(), request, ex.getErrorCode(), null);
+    }
+
+    @ExceptionHandler(ModelActivationException.class)
+    public ResponseEntity<ApiError> handleModelActivation(
+            ModelActivationException ex, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, "Model Activation Error", ex.getMessage(),
+            request, ex.getErrorCode(), null);
+    }
+
+    @ExceptionHandler(InvalidBacktestRequestException.class)
+    public ResponseEntity<ApiError> handleBacktestInput(
+            InvalidBacktestRequestException ex, HttpServletRequest request) {
+        return build(HttpStatus.UNPROCESSABLE_ENTITY, "Invalid Backtest Request", ex.getMessage(),
+            request, ex.getErrorCode(), null);
     }
 
     @ExceptionHandler(Exception.class)

@@ -28,6 +28,21 @@ public interface PredictionRepository extends JpaRepository<PredictionRecord, UU
         @Param("from") LocalDate from, @Param("to") LocalDate to);
 
     @Query("""
+        SELECT p FROM PredictionRecord p
+        WHERE p.actualDemand IS NOT NULL
+          AND (:category IS NULL OR p.category = :category)
+          AND (:region IS NULL OR p.region = :region)
+          AND (:fromDate IS NULL OR p.forecastDate >= :fromDate)
+          AND (:toDate IS NULL OR p.forecastDate <= :toDate)
+        ORDER BY p.forecastDate ASC
+    """)
+    List<PredictionRecord> findAccuracyRecords(
+        @Param("category") String category,
+        @Param("region") String region,
+        @Param("fromDate") LocalDate fromDate,
+        @Param("toDate") LocalDate toDate);
+
+    @Query("""
         SELECT p.category, AVG(ABS(p.predictedDemand - p.actualDemand)) AS mae
         FROM PredictionRecord p
         WHERE p.actualDemand IS NOT NULL

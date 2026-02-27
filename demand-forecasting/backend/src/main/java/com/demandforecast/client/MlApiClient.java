@@ -98,6 +98,12 @@ public class MlApiClient {
             .collectMap(n -> n.get("feature").asText(), n -> n.get("importance").asDouble());
     }
 
+    public Mono<Map<String, Object>> getModelInfo() {
+        return webClient.get().uri("/model/info").retrieve()
+            .bodyToMono(JsonNode.class)
+            .map(json -> mapper.convertValue(json, Map.class));
+    }
+
     private MlPredictResult toPredictResult(JsonNode json) {
         if (json == null || !json.hasNonNull("demand")) {
             throw new MlApiException("ML API response missing 'demand': " + String.valueOf(json));
