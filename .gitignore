@@ -1,0 +1,12 @@
+# macOS / editor
+.DS_Store
+.vscode/
+
+# old duplicate project folder
+build/
+build_backup/
+
+# local build/cache artifacts
+demand-forecasting/backend/target/
+demand-forecasting/ml/__pycache__/
+demand-forecasting/ml/.venv/
