@@ -1,0 +1,32 @@
+{
+  "MAE": 136.70833290087253,
+  "RMSE": 259.3629129324903,
+  "R2": 0.9876152181580229,
+  "MAPE": 34.068535463038266,
+  "model_type": "XGBoost (Tuned)",
+  "trained_on": "powergrid_material_dataset.csv",
+  "train_rows": 57600,
+  "test_rows": 14400,
+  "features": [
+    "Project_Phase",
+    "State",
+    "Region",
+    "Terrain_Type",
+    "Tower_Type",
+    "Substation_Type",
+    "Material_Type",
+    "Transmission_Length_KM",
+    "Budget_Crore",
+    "Lead_Time_Days",
+    "Tax_Percentage",
+    "Transportation_Cost",
+    "Historical_Consumption",
+    "Month",
+    "Year",
+    "quarter",
+    "month_sin",
+    "month_cos",
+    "fiscal_year"
+  ],
+  "trained_at": "2026-02-28T16:10:02.203749+00:00"
+}

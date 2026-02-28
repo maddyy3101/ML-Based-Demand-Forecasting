@@ -1,232 +1,364 @@
-"""
-Flask Inference API — Demand Forecasting (Production)
-"""
+from __future__ import annotations
 
+import json
 import os
-import uuid
-import logging
+import subprocess
+import threading
+from functools import lru_cache
+from pathlib import Path
+from typing import Any
+
+import joblib
 import numpy as np
 import pandas as pd
-import joblib
+from flask import Flask, jsonify, request
+from marshmallow import Schema, ValidationError, fields, validate
 
-from functools import lru_cache
-from flask import Flask, request, jsonify, g
-from marshmallow import Schema, fields, ValidationError, validate
+MODEL_DIR = Path(os.getenv("MODEL_DIR", Path(__file__).resolve().parent / "models"))
+DEFAULT_DATASET = "powergrid_material_dataset.csv"
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='{"time":"%(asctime)s","level":"%(levelname)s","msg":"%(message)s"}',
-    datefmt="%Y-%m-%dT%H:%M:%S"
-)
-logger = logging.getLogger(__name__)
+MATERIAL_THRESHOLDS = {
+    "Cement": {"high": 8000, "low": 1500},
+    "Conductor": {"high": 2500, "low": 500},
+    "Insulator": {"high": 2000, "low": 400},
+    "Steel": {"high": 5000, "low": 1000},
+    "Transformer": {"high": 60, "low": 10},
+}
 
-MODEL_DIR = os.getenv("MODEL_DIR", "models")
+MATERIAL_UNITS = {
+    "Cement": "Bags",
+    "Conductor": "Metres (coils)",
+    "Insulator": "Units",
+    "Steel": "MT",
+    "Transformer": "Units",
+}
+
+REQUIRED_KEYS = [
+    "Project_Phase",
+    "State",
+    "Region",
+    "Terrain_Type",
+    "Tower_Type",
+    "Substation_Type",
+    "Transmission_Length_KM",
+    "Budget_Crore",
+    "Lead_Time_Days",
+    "Tax_Percentage",
+    "Transportation_Cost",
+    "Historical_Consumption",
+    "Month",
+    "Year",
+    "Material_Type",
+]
+
+
+class PredictRequestSchema(Schema):
+    Project_Phase = fields.String(
+        required=True, validate=validate.OneOf(["Planning", "Execution", "Commissioning"])
+    )
+    State = fields.String(
+        required=True,
+        validate=validate.OneOf(
+            [
+                "Bihar",
+                "Gujarat",
+                "Karnataka",
+                "Maharashtra",
+                "Odisha",
+                "Rajasthan",
+                "Tamil Nadu",
+                "Telangana",
+                "Uttar Pradesh",
+                "West Bengal",
+            ]
+        ),
+    )
+    Region = fields.String(required=True, validate=validate.OneOf(["East", "North", "South", "West"]))
+    Terrain_Type = fields.String(required=True, validate=validate.OneOf(["Coastal", "Hilly", "Plain"]))
+    Tower_Type = fields.String(required=True, validate=validate.OneOf(["220kV", "400kV", "765kV"]))
+    Substation_Type = fields.String(required=True, validate=validate.OneOf(["AIS", "GIS"]))
+    Transmission_Length_KM = fields.Integer(required=True, validate=validate.Range(min=50, max=298))
+    Budget_Crore = fields.Integer(required=True, validate=validate.Range(min=302, max=1997))
+    Lead_Time_Days = fields.Integer(required=True, validate=validate.Range(min=15, max=59))
+    Tax_Percentage = fields.Float(required=True, validate=validate.Range(min=12.0, max=22.0))
+    Transportation_Cost = fields.Float(required=True, validate=validate.Range(min=2608, max=30627))
+    Historical_Consumption = fields.Float(required=True, validate=validate.Range(min=8, max=1800))
+    Month = fields.Integer(required=True, validate=validate.Range(min=1, max=12))
+    Year = fields.Integer(required=True, validate=validate.Range(min=2023, max=2030))
+    Material_Type = fields.String(
+        required=True,
+        validate=validate.OneOf(["Cement", "Conductor", "Insulator", "Steel", "Transformer"]),
+    )
+
+
+class BatchRequestSchema(Schema):
+    requests = fields.List(fields.Dict(), required=True, validate=validate.Length(min=1, max=50))
+
 
 @lru_cache(maxsize=1)
-def load_artifacts():
-    logger.info(f"Loading artifacts from {MODEL_DIR}")
-    interval_path = os.path.join(MODEL_DIR, "prediction_interval.pkl")
+def load_artifacts() -> dict[str, Any]:
+    best_model = joblib.load(MODEL_DIR / "best_model.pkl")
+    scaler = joblib.load(MODEL_DIR / "scaler.pkl")
+    label_encoders = joblib.load(MODEL_DIR / "label_encoders.pkl")
+    feature_names = joblib.load(MODEL_DIR / "feature_names.pkl")
+
+    with open(MODEL_DIR / "model_metrics.json", "r", encoding="utf-8") as f:
+        model_metrics = json.load(f)
+
+    per_material_path = MODEL_DIR / "per_material_metrics.json"
+    if per_material_path.exists():
+        with open(per_material_path, "r", encoding="utf-8") as f:
+            per_material_metrics = json.load(f)
+    else:
+        per_material_metrics = {}
+
     return {
-        "model":         joblib.load(os.path.join(MODEL_DIR, "best_model.pkl")),
-        "scaler":        joblib.load(os.path.join(MODEL_DIR, "scaler.pkl")),
-        "le_map":        joblib.load(os.path.join(MODEL_DIR, "label_encoders.pkl")),
-        "feature_names": joblib.load(os.path.join(MODEL_DIR, "feature_names.pkl")),
-        "prediction_interval": joblib.load(interval_path) if os.path.exists(interval_path) else None,
+        "model": best_model,
+        "scaler": scaler,
+        "label_encoders": label_encoders,
+        "feature_names": feature_names,
+        "model_metrics": model_metrics,
+        "per_material_metrics": per_material_metrics,
     }
 
-VALID_CATEGORIES  = ["Electronics", "Clothing", "Furniture", "Groceries", "Toys"]
-VALID_REGIONS     = ["North", "South", "East", "West"]
-VALID_WEATHER     = ["Sunny", "Rainy", "Snowy", "Cloudy", "Windy"]
-VALID_SEASONALITY = ["Spring", "Summer", "Autumn", "Winter"]
 
-class PredictSchema(Schema):
-    date               = fields.Date(required=True, format="%Y-%m-%d")
-    category           = fields.Str(required=True, validate=validate.OneOf(VALID_CATEGORIES))
-    region             = fields.Str(required=True, validate=validate.OneOf(VALID_REGIONS))
-    inventory_level    = fields.Int(required=True, validate=validate.Range(min=0))
-    units_sold         = fields.Int(load_default=0, validate=validate.Range(min=0))
-    units_ordered      = fields.Int(required=True, validate=validate.Range(min=0))
-    price              = fields.Float(required=True, validate=validate.Range(min=0.0))
-    discount           = fields.Float(required=True, validate=validate.Range(min=0.0, max=100.0))
-    weather_condition  = fields.Str(required=True, validate=validate.OneOf(VALID_WEATHER))
-    promotion          = fields.Int(required=True, validate=validate.OneOf([0, 1]))
-    competitor_pricing = fields.Float(required=True, validate=validate.Range(min=0.0))
-    seasonality        = fields.Str(required=True, validate=validate.OneOf(VALID_SEASONALITY))
-    epidemic           = fields.Int(required=True, validate=validate.OneOf([0, 1]))
-
-predict_schema = PredictSchema()
+def encode_value(encoder: Any, value: str) -> int:
+    try:
+        return int(encoder.transform([str(value)])[0])
+    except Exception:
+        classes = list(getattr(encoder, "classes_", []))
+        mapping = {label: idx for idx, label in enumerate(classes)}
+        return int(mapping.get(str(value), 0))
 
 
-def preprocess_input(data: dict, artifacts: dict) -> np.ndarray:
-    le_map        = artifacts["le_map"]
+def preprocess_input(data: dict[str, Any]) -> pd.DataFrame:
+    artifacts = load_artifacts()
+    encoders = artifacts["label_encoders"]
     feature_names = artifacts["feature_names"]
-    dt = data["date"]
 
-    row = {
-        "Inventory Level":    data["inventory_level"],
-        "Units Sold":         data["units_sold"],
-        "Units Ordered":      data["units_ordered"],
-        "Price":              data["price"],
-        "Discount":           data["discount"],
-        "Promotion":          data["promotion"],
-        "Competitor Pricing": data["competitor_pricing"],
-        "Epidemic":           data["epidemic"],
-        "year":               dt.year,
-        "month":              dt.month,
-        "day":                dt.day,
-        "week":               int(dt.isocalendar()[1]),
-        "dayofweek":          dt.weekday(),
-        "quarter":            (dt.month - 1) // 3 + 1,
+    month = int(data["Month"])
+    year = int(data["Year"])
+
+    payload = {
+        "Project_Phase": encode_value(encoders["Project_Phase"], data["Project_Phase"]),
+        "State": encode_value(encoders["State"], data["State"]),
+        "Region": encode_value(encoders["Region"], data["Region"]),
+        "Terrain_Type": encode_value(encoders["Terrain_Type"], data["Terrain_Type"]),
+        "Tower_Type": encode_value(encoders["Tower_Type"], data["Tower_Type"]),
+        "Substation_Type": encode_value(encoders["Substation_Type"], data["Substation_Type"]),
+        "Transmission_Length_KM": int(data["Transmission_Length_KM"]),
+        "Budget_Crore": int(data["Budget_Crore"]),
+        "Lead_Time_Days": int(data["Lead_Time_Days"]),
+        "Tax_Percentage": float(data["Tax_Percentage"]),
+        "Transportation_Cost": float(data["Transportation_Cost"]),
+        "Historical_Consumption": float(data["Historical_Consumption"]),
+        "Month": month,
+        "Year": year,
+        "Material_Type": encode_value(encoders["Material_Type"], data["Material_Type"]),
+        "quarter": int(pd.cut([month], bins=[0, 3, 6, 9, 12], labels=[1, 2, 3, 4])[0]),
+        "month_sin": float(np.sin(2 * np.pi * month / 12)),
+        "month_cos": float(np.cos(2 * np.pi * month / 12)),
+        "fiscal_year": int(year if month >= 4 else year - 1),
     }
 
-    col_key_map = {
-        "Category":          "category",
-        "Region":            "region",
-        "Weather Condition": "weather_condition",
-        "Seasonality":       "seasonality",
-    }
-    for col, key in col_key_map.items():
-        le = le_map[col]
-        raw = str(data[key])
-        try:
-            row[col] = int(le.transform([raw])[0])
-        except ValueError:
-            logger.warning(f"Unseen label '{raw}' for '{col}' — defaulting to 0")
-            row[col] = 0
-
-    df_row = pd.DataFrame([row])[feature_names]
-    return df_row.values
+    row_df = pd.DataFrame([payload])
+    ordered = row_df.reindex(columns=feature_names, fill_value=0)
+    return ordered
 
 
-def prediction_with_interval(raw_pred: float, artifacts: dict) -> dict:
-    pred = float(raw_pred)
-    interval = artifacts.get("prediction_interval")
-    if not interval:
-        return {"demand": round(pred, 2)}
-    lower = pred + float(interval["lower_residual_q"])
-    upper = pred + float(interval["upper_residual_q"])
-    return {
-        "demand": round(pred, 2),
-        "lower_bound": round(min(lower, upper), 2),
-        "upper_bound": round(max(lower, upper), 2),
-    }
+def get_procurement_decision(predicted: int, material: str) -> dict[str, str]:
+    threshold = MATERIAL_THRESHOLDS.get(material, {"high": 1000, "low": 100})
+
+    if predicted > threshold["high"]:
+        decision = "CRITICAL_PROCUREMENT"
+        message = f"Demand critically high. Immediate procurement of {predicted} units required."
+    elif predicted > threshold["high"] * 0.7:
+        decision = "PROCURE_NOW"
+        message = f"High demand forecast. Initiate procurement of {predicted} units this cycle."
+    elif predicted < threshold["low"]:
+        decision = "HOLD"
+        message = "Low demand period. Current stock may suffice. Review before ordering."
+    else:
+        decision = "PLAN_ORDER"
+        message = f"Moderate demand. Plan procurement of {predicted} units for next cycle."
+
+    return {"decision": decision, "message": message}
+
+
+def requires_scaling(model_type: str) -> bool:
+    return "LinearRegression" in model_type
+
+
+def predict_quantities(input_df: pd.DataFrame) -> np.ndarray:
+    artifacts = load_artifacts()
+    model = artifacts["model"]
+    scaler = artifacts["scaler"]
+    model_type = artifacts["model_metrics"].get("model_type", "")
+
+    if requires_scaling(model_type):
+        preds = model.predict(scaler.transform(input_df))
+    else:
+        preds = model.predict(input_df)
+
+    return np.clip(np.asarray(preds, dtype=float), a_min=0, a_max=None)
+
+
+def run_retraining(dataset_path: str) -> None:
+    train_script = Path(__file__).resolve().parent / "demand_forecasting_train.py"
+    cmd = ["python", str(train_script), "--data", dataset_path]
+    subprocess.run(cmd, check=False)
+    load_artifacts.cache_clear()
 
 
 def create_app() -> Flask:
     app = Flask(__name__)
-    app.config["MAX_BATCH_SIZE"] = int(os.getenv("MAX_BATCH_SIZE", 256))
-    app.config["JSON_SORT_KEYS"] = False
 
-    artifacts = load_artifacts()
-    logger.info(f"Model ready: {type(artifacts['model']).__name__}")
+    @app.errorhandler(ValidationError)
+    def handle_validation_error(err: ValidationError):
+        return jsonify({"error": "Validation failed", "details": err.messages}), 400
 
-    @app.before_request
-    def attach_request_id():
-        g.request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
-
-    @app.after_request
-    def add_request_id_header(response):
-        response.headers["X-Request-ID"] = g.request_id
-        return response
-
-    @app.errorhandler(400)
-    def bad_request(e):
-        return jsonify({"error": "Bad Request", "message": str(e),
-                        "request_id": g.get("request_id")}), 400
-
-    @app.errorhandler(404)
-    def not_found(e):
-        return jsonify({"error": "Not Found", "request_id": g.get("request_id")}), 404
-
-    @app.errorhandler(500)
-    def internal_error(e):
-        logger.exception("Unhandled server error")
-        return jsonify({"error": "Internal Server Error",
-                        "request_id": g.get("request_id")}), 500
-
-    @app.get("/health")
-    def health():
-        model = artifacts["model"]
-        return jsonify({
-            "status": "ok",
-            "model_type": type(model).__name__,
-            "has_prediction_interval": artifacts.get("prediction_interval") is not None,
-            "request_id": g.request_id
-        })
-
-    @app.get("/model/info")
-    def model_info():
-        model = artifacts["model"]
-        info = {
-            "model_type":    type(model).__name__,
-            "feature_names": artifacts["feature_names"],
-            "n_features":    len(artifacts["feature_names"]),
-        }
-        if artifacts.get("prediction_interval"):
-            info["prediction_interval"] = {
-                "coverage": artifacts["prediction_interval"]["coverage"]
-            }
-        if hasattr(model, "n_estimators"):
-            info["n_estimators"] = model.n_estimators
-        return jsonify(info)
+    @app.errorhandler(Exception)
+    def handle_exception(err: Exception):
+        return jsonify({"error": "Internal server error", "message": str(err)}), 500
 
     @app.post("/predict")
     def predict():
-        raw = request.get_json(force=True, silent=True)
-        if raw is None:
-            return jsonify({"error": "Request body must be valid JSON"}), 400
-        try:
-            data = predict_schema.load(raw)
-        except ValidationError as err:
-            return jsonify({"error": "Validation failed", "details": err.messages}), 422
-        X = preprocess_input(data, artifacts)
-        pred = float(artifacts["model"].predict(X)[0])
-        logger.info(f"predict | request_id={g.request_id} | demand={pred:.2f}")
-        body = prediction_with_interval(pred, artifacts)
-        body["request_id"] = g.request_id
-        return jsonify(body)
+        payload = request.get_json(silent=True) or {}
+        validated = PredictRequestSchema().load(payload)
+
+        features_df = preprocess_input(validated)
+        predicted_quantity = int(round(float(predict_quantities(features_df)[0])))
+
+        decision = get_procurement_decision(predicted_quantity, validated["Material_Type"])
+        model_type = load_artifacts()["model_metrics"].get("model_type", "Unknown")
+
+        return jsonify(
+            {
+                "quantity_required": predicted_quantity,
+                "material_type": validated["Material_Type"],
+                "unit_label": MATERIAL_UNITS.get(validated["Material_Type"], "Units"),
+                "procurement_decision": decision["decision"],
+                "decision_message": decision["message"],
+                "model_type": model_type,
+            }
+        )
 
     @app.post("/predict/batch")
     def predict_batch():
-        raw = request.get_json(force=True, silent=True)
-        if not isinstance(raw, list):
-            return jsonify({"error": "Batch endpoint expects a JSON array"}), 400
-        max_batch = app.config["MAX_BATCH_SIZE"]
-        if len(raw) > max_batch:
-            return jsonify({"error": f"Batch size {len(raw)} exceeds limit {max_batch}"}), 413
-        results, valid_indices, rows = [], [], []
-        for i, item in enumerate(raw):
+        payload = request.get_json(silent=True) or {}
+        base = BatchRequestSchema().load(payload)
+        requests_payload = base["requests"]
+
+        schema = PredictRequestSchema()
+        valid_rows: list[dict[str, Any]] = []
+        failed: list[dict[str, Any]] = []
+
+        for index, item in enumerate(requests_payload):
             try:
-                data = predict_schema.load(item)
-                rows.append(preprocess_input(data, artifacts))
-                valid_indices.append(i)
-                results.append(None)
+                valid_rows.append(schema.load(item))
             except ValidationError as err:
-                results.append({"demand": None, "status": "error", "message": err.messages})
-        if rows:
-            X_batch = np.vstack(rows)
-            preds   = artifacts["model"].predict(X_batch)
-            for idx, pred in zip(valid_indices, preds):
-                result = prediction_with_interval(float(pred), artifacts)
-                result["status"] = "ok"
-                results[idx] = result
-        logger.info(f"batch_predict | request_id={g.request_id} | n={len(raw)} | valid={len(valid_indices)}")
-        return jsonify(results)
+                failed.append({"index": index, "errors": err.messages})
+
+        if not valid_rows:
+            return jsonify({"predictions": [], "count": 0, "failed": failed}), 400
+
+        processed_frames = [preprocess_input(item) for item in valid_rows]
+        batch_df = pd.concat(processed_frames, ignore_index=True)
+        preds = predict_quantities(batch_df)
+
+        results = []
+        for row, pred in zip(valid_rows, preds):
+            qty = int(round(float(pred)))
+            decision = get_procurement_decision(qty, row["Material_Type"])
+            results.append(
+                {
+                    "quantity_required": qty,
+                    "material_type": row["Material_Type"],
+                    "unit_label": MATERIAL_UNITS.get(row["Material_Type"], "Units"),
+                    "procurement_decision": decision["decision"],
+                    "decision_message": decision["message"],
+                }
+            )
+
+        return jsonify({"predictions": results, "count": len(results), "failed": failed})
+
+    @app.get("/health")
+    def health():
+        artifacts = load_artifacts()
+        metrics = artifacts["model_metrics"]
+        return jsonify(
+            {
+                "status": "ok",
+                "model_type": metrics.get("model_type", "Unknown"),
+                "features_count": len(artifacts["feature_names"]),
+                "training_rows": metrics.get("train_rows", 0),
+                "trained_at": metrics.get("trained_at"),
+                "dataset": metrics.get("trained_on", DEFAULT_DATASET),
+            }
+        )
+
+    @app.get("/model-info")
+    def model_info():
+        artifacts = load_artifacts()
+        metrics = artifacts["model_metrics"]
+        return jsonify(
+            {
+                "model_type": metrics.get("model_type", "Unknown"),
+                "features": artifacts["feature_names"],
+                "material_types": ["Cement", "Conductor", "Insulator", "Steel", "Transformer"],
+                "project_phases": ["Planning", "Execution", "Commissioning"],
+                "regions": ["East", "North", "South", "West"],
+                "tower_types": ["220kV", "400kV", "765kV"],
+                "metrics": metrics,
+                "per_material_metrics": artifacts["per_material_metrics"],
+            }
+        )
 
     @app.get("/feature-importance")
     def feature_importance():
+        artifacts = load_artifacts()
         model = artifacts["model"]
-        if not hasattr(model, "feature_importances_"):
-            return jsonify({"error": "Feature importances not available"}), 400
-        fi = sorted(
-            zip(artifacts["feature_names"], model.feature_importances_.tolist()),
-            key=lambda x: x[1], reverse=True
+        feature_names = artifacts["feature_names"]
+
+        if hasattr(model, "feature_importances_"):
+            scores = np.asarray(model.feature_importances_, dtype=float)
+        elif hasattr(model, "coef_"):
+            raw_coef = np.asarray(model.coef_, dtype=float)
+            scores = np.abs(raw_coef)
+        else:
+            return jsonify({"feature_importance": []})
+
+        entries = [
+            {"feature": feature, "importance": float(importance)}
+            for feature, importance in zip(feature_names, scores)
+        ]
+        entries.sort(key=lambda item: item["importance"], reverse=True)
+
+        return jsonify({"feature_importance": entries[:15]})
+
+    @app.get("/accuracy")
+    def accuracy():
+        artifacts = load_artifacts()
+        return jsonify(
+            {
+                "metrics": artifacts["model_metrics"],
+                "per_material_metrics": artifacts["per_material_metrics"],
+            }
         )
-        return jsonify([{"feature": f, "importance": round(imp, 6)} for f, imp in fi])
+
+    @app.post("/retrain")
+    def retrain():
+        payload = request.get_json(silent=True) or {}
+        dataset_path = payload.get("datasetPath", DEFAULT_DATASET)
+
+        thread = threading.Thread(target=run_retraining, args=(dataset_path,), daemon=True)
+        thread.start()
+
+        return jsonify({"status": "started", "message": "Retraining initiated"})
 
     return app
 
 
 if __name__ == "__main__":
     application = create_app()
-    application.run(host="0.0.0.0", port=5000, debug=False)
+    application.run(host="0.0.0.0", port=5001)
