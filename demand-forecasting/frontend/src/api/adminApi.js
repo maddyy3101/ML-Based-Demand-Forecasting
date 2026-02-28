@@ -17,6 +17,9 @@ export const adminApi = {
   updateUser: async (id, payload) =>
     (await axiosClient.put(`/admin/users/${id}`, payload)).data,
   deactivateUser: async (id) => (await axiosClient.delete(`/admin/users/${id}`)).data,
+  reactivateUser: async (id) => (await axiosClient.post(`/admin/users/${id}/reactivate`)).data,
+  deleteUserPermanently: async (id) =>
+    (await axiosClient.delete(`/admin/users/${id}/permanent`)).data,
   systemHealth: async () => (await axiosClient.get("/admin/system-health")).data,
   auditLog: async (params) => (await axiosClient.get("/admin/audit-log", { params })).data,
 };

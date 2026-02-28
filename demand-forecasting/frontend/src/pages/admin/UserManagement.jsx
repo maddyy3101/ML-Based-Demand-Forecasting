@@ -107,6 +107,32 @@ export default function UserManagement() {
     }
   };
 
+  const reactivate = async (id) => {
+    setError("");
+    setMessage("");
+    try {
+      await adminApi.reactivateUser(id);
+      setMessage("User reactivated.");
+      await load();
+    } catch (err) {
+      setError(parseError(err));
+    }
+  };
+
+  const removePermanently = async (id, username) => {
+    setError("");
+    setMessage("");
+    const proceed = window.confirm(`Permanently delete user '${username}'? This cannot be undone.`);
+    if (!proceed) return;
+    try {
+      await adminApi.deleteUserPermanently(id);
+      setMessage("User permanently deleted.");
+      await load();
+    } catch (err) {
+      setError(parseError(err));
+    }
+  };
+
   return (
     <div className="space-y-4">
       <form className="pg-card p-4 grid md:grid-cols-3 gap-3" onSubmit={create}>
@@ -198,11 +224,29 @@ export default function UserManagement() {
           {
             key: "action",
             label: "Action",
-            render: (_, row) => (
-              <button className="pg-btn" onClick={() => deactivate(row.id)} disabled={!row.active}>
-                {row.active ? "Deactivate" : "Inactive"}
-              </button>
-            ),
+            render: (_, row) =>
+              row.active ? (
+                <button className="pg-btn" onClick={() => deactivate(row.id)}>
+                  Deactivate
+                </button>
+              ) : (
+                <div className="flex gap-2">
+                  <button
+                    className="pg-btn"
+                    onClick={() => reactivate(row.id)}
+                    style={{ borderColor: "var(--green)", color: "var(--green)" }}
+                  >
+                    Reactivate
+                  </button>
+                  <button
+                    className="pg-btn"
+                    onClick={() => removePermanently(row.id, row.username)}
+                    style={{ borderColor: "var(--red)", color: "var(--red)" }}
+                  >
+                    Delete
+                  </button>
+                </div>
+              ),
           },
         ]}
         rows={users}

@@ -2,10 +2,31 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
+const roleMeta = {
+  ROLE_ADMIN: {
+    label: "HQ Admin",
+    portalTitle: "HQ Admin Login",
+    route: "/login/admin",
+    hint: "POWERGRID HQ administration access",
+  },
+  ROLE_PROCUREMENT_OFFICER: {
+    label: "Procurement Officer",
+    portalTitle: "Procurement Officer Login",
+    route: "/login/procurement",
+    hint: "Procurement operations access",
+  },
+  ROLE_SITE_MANAGER: {
+    label: "Site Manager",
+    portalTitle: "Site Manager Login",
+    route: "/login/site-manager",
+    hint: "Warehouse and site operations access",
+  },
+};
+
 const demoCards = [
-  { label: "🔑 HQ Admin", username: "hq_admin", password: "pgAdmin@2025" },
-  { label: "📋 Procurement (N)", username: "proc_north", password: "procN@2025" },
-  { label: "🏗️ Site Manager", username: "site_raj", password: "siteR@2025" },
+  { label: "🔑 HQ Admin", username: "hq_admin", password: "pgAdmin@2025", role: "ROLE_ADMIN" },
+  { label: "📋 Procurement (N)", username: "proc_north", password: "procN@2025", role: "ROLE_PROCUREMENT_OFFICER" },
+  { label: "🏗️ Site Manager", username: "site_raj", password: "siteR@2025", role: "ROLE_SITE_MANAGER" },
 ];
 
 function homeByRole(role) {
@@ -26,12 +47,16 @@ function parseLoginError(err) {
   );
 }
 
-export default function LoginPage() {
-  const { login, loading } = useAuth();
+export default function LoginPage({ requiredRole = null }) {
+  const { login, logout, loading } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = useState("");
   const [openDemo, setOpenDemo] = useState(true);
   const [form, setForm] = useState({ username: "", password: "" });
+  const currentPortal = requiredRole ? roleMeta[requiredRole] : null;
+  const visibleDemoCards = requiredRole
+    ? demoCards.filter((card) => card.role === requiredRole)
+    : demoCards;
 
   const submit = async (event) => {
     event.preventDefault();
@@ -47,6 +72,13 @@ export default function LoginPage() {
         username: form.username.trim(),
         password: form.password,
       });
+
+      if (requiredRole && data.role !== requiredRole) {
+        logout();
+        setError(`This portal is restricted to ${roleMeta[requiredRole].label}. Please use the correct login page.`);
+        return;
+      }
+
       navigate(homeByRole(data.role), { replace: true });
     } catch (err) {
       setError(parseLoginError(err));
@@ -89,8 +121,34 @@ export default function LoginPage() {
 
         <div className="flex-1 p-6 md:p-12 flex items-center justify-center">
           <form onSubmit={submit} className="pg-card pg-premium-card pg-glass w-full max-w-lg p-7 md:p-8">
-            <h1 className="font-display text-3xl tracking-tight">POWERGRID Staff Login</h1>
-            <p className="pg-subtitle mt-1">Secure access for authorised personnel only</p>
+            <h1 className="font-display text-3xl tracking-tight">
+              {currentPortal ? currentPortal.portalTitle : "POWERGRID Staff Login"}
+            </h1>
+            <p className="pg-subtitle mt-1">
+              {currentPortal ? currentPortal.hint : "Secure access for authorised personnel only"}
+            </p>
+
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+              {Object.entries(roleMeta).map(([role, meta]) => (
+                <button
+                  key={role}
+                  type="button"
+                  className="pg-btn px-2 py-2"
+                  onClick={() => navigate(meta.route)}
+                  style={
+                    role === requiredRole
+                      ? {
+                          borderColor: "var(--orange)",
+                          color: "var(--orange)",
+                          background: "linear-gradient(90deg, rgba(244,124,32,0.18), rgba(244,124,32,0.08))",
+                        }
+                      : undefined
+                  }
+                >
+                  {meta.label}
+                </button>
+              ))}
+            </div>
 
             <div className="mt-6 space-y-4">
               <label className="block">
@@ -130,7 +188,7 @@ export default function LoginPage() {
               </button>
               {openDemo ? (
                 <div className="mt-3 grid gap-2">
-                  {demoCards.map((card, index) => (
+                  {visibleDemoCards.map((card, index) => (
                     <button
                       key={card.username}
                       type="button"

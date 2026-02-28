@@ -33,6 +33,9 @@ export default function App() {
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/login/admin" element={<LoginPage requiredRole="ROLE_ADMIN" />} />
+      <Route path="/login/procurement" element={<LoginPage requiredRole="ROLE_PROCUREMENT_OFFICER" />} />
+      <Route path="/login/site-manager" element={<LoginPage requiredRole="ROLE_SITE_MANAGER" />} />
 
       <Route element={<ProtectedRoute role="ROLE_ADMIN" />}>
         <Route path="/admin" element={<AdminLayout />}>

@@ -36,6 +36,7 @@ import java.util.Set;
 import java.util.UUID;
 import javax.sql.DataSource;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -175,6 +176,29 @@ public class AdminService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
         user.setActive(false);
         userRepository.save(user);
+    }
+
+    @Transactional
+    public void reactivateUser(UUID userId) {
+        PowerGridUser user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
+        user.setActive(true);
+        userRepository.save(user);
+    }
+
+    @Transactional
+    public void deleteUserPermanently(UUID userId) {
+        PowerGridUser user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
+        if (user.isActive()) {
+            throw new ValidationFailureException("Deactivate user before permanent deletion.");
+        }
+        try {
+            userRepository.delete(user);
+            userRepository.flush();
+        } catch (DataIntegrityViolationException ex) {
+            throw new ValidationFailureException("Cannot delete user because related audit/inventory records exist.");
+        }
     }
 
     public SystemHealthDto getSystemHealth() {

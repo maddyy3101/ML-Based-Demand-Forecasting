@@ -76,6 +76,16 @@ public class AdminController {
         adminService.deactivateUser(id);
     }
 
+    @PostMapping("/users/{id}/reactivate")
+    public void reactivateUser(@PathVariable UUID id) {
+        adminService.reactivateUser(id);
+    }
+
+    @DeleteMapping("/users/{id}/permanent")
+    public void deleteUserPermanently(@PathVariable UUID id) {
+        adminService.deleteUserPermanently(id);
+    }
+
     @GetMapping("/system-health")
     public SystemHealthDto systemHealth() {
         return adminService.getSystemHealth();
