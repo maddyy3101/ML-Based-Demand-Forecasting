@@ -13,21 +13,22 @@ import com.powergrid.forecasting.enums.MaterialType;
 import com.powergrid.forecasting.enums.MovementType;
 import com.powergrid.forecasting.enums.Region;
 import com.powergrid.forecasting.exception.ResourceNotFoundException;
+import com.powergrid.forecasting.exception.ValidationFailureException;
 import com.powergrid.forecasting.repository.MaterialInventoryRepository;
 import com.powergrid.forecasting.repository.MaterialMovementRepository;
 import com.powergrid.forecasting.repository.ProcurementForecastRepository;
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.DoubleSummaryStatistics;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Service
 public class PlanningService {
+
+    private static final Logger log = LoggerFactory.getLogger(PlanningService.class);
 
     private final MaterialInventoryRepository inventoryRepository;
     private final MaterialMovementRepository movementRepository;
@@ -88,39 +89,58 @@ public class PlanningService {
     }
 
     public PurchasePlanResponseDto generatePurchasePlan(PurchasePlanRequestDto request) {
+        String planMonth = request.planMonth() == null ? "" : request.planMonth().trim();
+        if (!planMonth.matches("^\\d{4}-(0[1-9]|1[0-2])$")) {
+            throw new ValidationFailureException("planMonth must be in YYYY-MM format.");
+        }
+
+        String regionInput = request.region() == null ? "" : request.region().trim();
         List<MaterialInventory> inventoryItems;
-        if (request.region() == null || request.region().isBlank()) {
+        if (regionInput.isBlank()) {
             inventoryItems = inventoryRepository.findAll();
         } else {
-            inventoryItems = inventoryRepository.findByRegion(Region.fromDisplayName(request.region()));
+            Region region;
+            try {
+                region = Region.fromDisplayName(regionInput);
+            } catch (IllegalArgumentException ex) {
+                throw new ValidationFailureException("Invalid region: " + regionInput);
+            }
+            inventoryItems = inventoryRepository.findByRegion(region);
         }
 
         List<PurchasePlanResponseDto.Line> lines = new ArrayList<>();
         double totalBudget = 0.0;
 
         for (MaterialInventory inventory : inventoryItems) {
-            ProcurementForecast latest = forecastRepository
-                    .findTopByMaterialTypeAndRegionOrderByCreatedAtDesc(inventory.getMaterialType(), inventory.getRegion())
-                    .orElse(null);
-            int predicted = latest == null ? 0 : latest.getPredictedQuantity();
-            int qty = Math.max(0, (int) Math.ceil(predicted * 1.5 - inventory.getCurrentStock()));
-            double estimatedCost = qty * inventory.getUnitCostInr();
-            totalBudget += estimatedCost;
+            try {
+                if (inventory.getMaterialType() == null || inventory.getRegion() == null) {
+                    log.warn("Skipping inventory record {} due to missing materialType/region", inventory.getId());
+                    continue;
+                }
 
-            String urgency = qty > 0 && inventory.getCurrentStock() < inventory.getReorderThreshold() ? "HIGH"
-                    : qty > 0 ? "MEDIUM" : "LOW";
+                int predicted = resolvePredictedDemand(inventory);
+                int demandBasis = Math.max(predicted, inventory.getReorderThreshold());
+                int qty = Math.max(0, (int) Math.ceil(demandBasis * 1.25 - inventory.getCurrentStock()));
+                double estimatedCost = qty * inventory.getUnitCostInr();
+                totalBudget += estimatedCost;
 
-            lines.add(new PurchasePlanResponseDto.Line(
-                    inventory.getMaterialType().getDisplayName(),
-                    inventory.getRegion().getDisplayName(),
-                    qty,
-                    inventory.getUnitLabel(),
-                    round(estimatedCost),
-                    urgency
-            ));
+                String urgency = qty > 0 && inventory.getCurrentStock() < inventory.getReorderThreshold() ? "HIGH"
+                        : qty > 0 ? "MEDIUM" : "LOW";
+
+                lines.add(new PurchasePlanResponseDto.Line(
+                        inventory.getMaterialType().getDisplayName(),
+                        inventory.getRegion().getDisplayName(),
+                        qty,
+                        inventory.getUnitLabel(),
+                        round(estimatedCost),
+                        urgency
+                ));
+            } catch (Exception ex) {
+                log.error("Failed to generate purchase-plan line for inventory {}: {}", inventory.getId(), ex.getMessage(), ex);
+            }
         }
 
-        return new PurchasePlanResponseDto(request.planMonth(), lines, round(totalBudget));
+        return new PurchasePlanResponseDto(planMonth, lines, round(totalBudget));
     }
 
     public List<PlanningExceptionDto> getExceptions(String region) {
@@ -152,5 +172,27 @@ public class PlanningService {
 
     private double round(double value) {
         return Math.round(value * 100.0) / 100.0;
+    }
+
+    private int resolvePredictedDemand(MaterialInventory inventory) {
+        ProcurementForecast latest = forecastRepository
+                .findTopByMaterialTypeAndRegionOrderByCreatedAtDesc(inventory.getMaterialType(), inventory.getRegion())
+                .orElse(null);
+        if (latest != null && latest.getPredictedQuantity() > 0) {
+            return latest.getPredictedQuantity();
+        }
+
+        Instant since = Instant.now().minusSeconds(30L * 24L * 60L * 60L);
+        List<MaterialMovement> recentDeployments = movementRepository
+                .findByInventoryIdAndTimestampAfter(inventory.getId(), since)
+                .stream()
+                .filter(m -> m.getMovementType() == MovementType.DEPLOYMENT)
+                .toList();
+        if (!recentDeployments.isEmpty()) {
+            double avgDaily = recentDeployments.stream().mapToInt(MaterialMovement::getQuantity).average().orElse(0.0);
+            return (int) Math.ceil(avgDaily * 30.0);
+        }
+
+        return inventory.getReorderThreshold();
     }
 }

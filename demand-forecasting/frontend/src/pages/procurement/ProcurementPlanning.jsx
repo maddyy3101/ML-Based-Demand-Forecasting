@@ -65,6 +65,9 @@ export default function ProcurementPlanning() {
     setRunning(true);
     setError("");
     try {
+      if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(form.planMonth)) {
+        throw new Error("Plan month must be in YYYY-MM format.");
+      }
       const data = await planningApi.purchasePlan({ planMonth: form.planMonth, region: form.region });
       setPurchasePlan(data);
     } catch (err) {
@@ -94,7 +97,7 @@ export default function ProcurementPlanning() {
           <select className="pg-input" value={form.region} onChange={(e) => setForm({ ...form, region: e.target.value })}>
             {regions.map((region) => <option key={region}>{region}</option>)}
           </select>
-          <input className="pg-input" value={form.planMonth} onChange={(e) => setForm({ ...form, planMonth: e.target.value })} placeholder="YYYY-MM" />
+          <input className="pg-input" type="month" value={form.planMonth} onChange={(e) => setForm({ ...form, planMonth: e.target.value })} />
           <input className="pg-input" value={form.planningHorizon} onChange={(e) => setForm({ ...form, planningHorizon: e.target.value })} placeholder="30d" />
           <input className="pg-input" type="number" min="1" value={form.leadTimeDays} onChange={(e) => setForm({ ...form, leadTimeDays: Number(e.target.value) })} placeholder="Lead Time Days" />
           <input className="pg-input" type="number" step="0.01" min="0.8" max="0.999" value={form.serviceLevel} onChange={(e) => setForm({ ...form, serviceLevel: Number(e.target.value) })} placeholder="Service Level" />
