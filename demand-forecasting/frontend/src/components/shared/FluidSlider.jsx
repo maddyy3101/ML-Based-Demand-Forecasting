@@ -88,7 +88,7 @@ export default function FluidSlider({
           value={numeric}
           className={`pg-slider ${isDragging ? "pg-slider-dragging" : ""}`}
           style={{
-            background: `linear-gradient(90deg, var(--orange) 0%, var(--navy-light) ${percent}%, rgba(38,65,115,0.86) ${percent}%, rgba(11,23,47,0.9) 100%)`,
+            background: `linear-gradient(90deg, var(--text-1) 0%, var(--navy-light) ${percent}%, rgba(70, 77, 89, 0.86) ${percent}%, rgba(24, 27, 34, 0.92) 100%)`,
           }}
           onMouseDown={() => setIsDragging(true)}
           onMouseUp={() => setIsDragging(false)}

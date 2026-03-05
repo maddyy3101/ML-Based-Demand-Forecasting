@@ -117,8 +117,8 @@ export default function WhatIfSimulator() {
               <XAxis dataKey="name" {...PG_CHART_CONFIG.axis} />
               <YAxis {...PG_CHART_CONFIG.axis} />
               <Tooltip {...PG_CHART_CONFIG.tooltip} />
-              <Bar dataKey="Baseline" fill="#4f8ef7" />
-              <Bar dataKey="Simulated" fill="#f47c20" />
+              <Bar dataKey="Baseline" fill={PG_CHART_CONFIG.series.tertiary} />
+              <Bar dataKey="Simulated" fill={PG_CHART_CONFIG.series.primary} />
             </BarChart>
           </ResponsiveContainer>
         </div>

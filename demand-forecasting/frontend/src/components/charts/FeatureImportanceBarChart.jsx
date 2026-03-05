@@ -12,7 +12,7 @@ export default function FeatureImportanceBarChart({ data }) {
             <XAxis type="number" {...PG_CHART_CONFIG.axis} />
             <YAxis type="category" dataKey="feature" width={150} {...PG_CHART_CONFIG.axis} />
             <Tooltip {...PG_CHART_CONFIG.tooltip} />
-            <Bar dataKey="importance" fill="#4f8ef7" />
+            <Bar dataKey="importance" fill={PG_CHART_CONFIG.series.primary} />
           </BarChart>
         </ResponsiveContainer>
       </div>

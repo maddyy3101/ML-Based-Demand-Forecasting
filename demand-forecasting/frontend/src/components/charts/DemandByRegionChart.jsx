@@ -13,10 +13,10 @@ export default function DemandByRegionChart({ data }) {
             <YAxis {...PG_CHART_CONFIG.axis} />
             <Tooltip {...PG_CHART_CONFIG.tooltip} />
             <Legend {...PG_CHART_CONFIG.legend} />
-            <Area type="monotone" dataKey="East" stroke="#4f8ef7" fill="#4f8ef744" />
-            <Area type="monotone" dataKey="North" stroke="#f47c20" fill="#f47c2044" />
-            <Area type="monotone" dataKey="South" stroke="#22c55e" fill="#22c55e44" />
-            <Area type="monotone" dataKey="West" stroke="#a78bfa" fill="#a78bfa44" />
+            <Area type="monotone" dataKey="East" stroke={PG_CHART_CONFIG.regionColors.East} fill={`${PG_CHART_CONFIG.regionColors.East}4d`} />
+            <Area type="monotone" dataKey="North" stroke={PG_CHART_CONFIG.regionColors.North} fill={`${PG_CHART_CONFIG.regionColors.North}4d`} />
+            <Area type="monotone" dataKey="South" stroke={PG_CHART_CONFIG.regionColors.South} fill={`${PG_CHART_CONFIG.regionColors.South}4d`} />
+            <Area type="monotone" dataKey="West" stroke={PG_CHART_CONFIG.regionColors.West} fill={`${PG_CHART_CONFIG.regionColors.West}4d`} />
           </AreaChart>
         </ResponsiveContainer>
       </div>

@@ -5,7 +5,7 @@ export default function ProgressBar({ value }) {
         className="h-full"
         style={{
           width: `${Math.max(0, Math.min(100, value))}%`,
-          background: "linear-gradient(90deg, var(--navy-light), var(--orange))",
+          background: "linear-gradient(90deg, var(--navy-light), var(--text-1))",
           transition: "width 0.3s",
         }}
       />

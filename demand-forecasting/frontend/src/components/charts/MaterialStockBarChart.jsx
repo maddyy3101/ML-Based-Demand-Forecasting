@@ -13,8 +13,8 @@ export default function MaterialStockBarChart({ data }) {
             <YAxis {...PG_CHART_CONFIG.axis} />
             <Tooltip {...PG_CHART_CONFIG.tooltip} />
             <Legend {...PG_CHART_CONFIG.legend} />
-            <Bar dataKey="currentStock" fill="#4f8ef7" />
-            <Bar dataKey="reorderThreshold" fill="#f47c20" />
+            <Bar dataKey="currentStock" fill={PG_CHART_CONFIG.series.primary} />
+            <Bar dataKey="reorderThreshold" fill={PG_CHART_CONFIG.series.tertiary} />
           </BarChart>
         </ResponsiveContainer>
       </div>

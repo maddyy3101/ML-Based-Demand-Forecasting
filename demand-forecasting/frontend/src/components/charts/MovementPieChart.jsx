@@ -1,7 +1,7 @@
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { PG_CHART_CONFIG } from "../../utils/chartConfig";
 
-const COLORS = ["#22c55e", "#ef4444", "#a78bfa"];
+const COLORS = [PG_CHART_CONFIG.series.secondary, PG_CHART_CONFIG.series.quaternary, PG_CHART_CONFIG.series.muted];
 
 export default function MovementPieChart({ data }) {
   return (

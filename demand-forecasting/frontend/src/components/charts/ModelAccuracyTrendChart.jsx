@@ -13,8 +13,8 @@ export default function ModelAccuracyTrendChart({ data }) {
             <YAxis {...PG_CHART_CONFIG.axis} />
             <Tooltip {...PG_CHART_CONFIG.tooltip} />
             <Legend {...PG_CHART_CONFIG.legend} />
-            <Line type="monotone" dataKey="MAE" stroke="#f59e0b" />
-            <Line type="monotone" dataKey="RMSE" stroke="#4f8ef7" />
+            <Line type="monotone" dataKey="MAE" stroke={PG_CHART_CONFIG.series.tertiary} />
+            <Line type="monotone" dataKey="RMSE" stroke={PG_CHART_CONFIG.series.primary} />
           </LineChart>
         </ResponsiveContainer>
       </div>

@@ -12,7 +12,7 @@ export default function MonthlyForecastVolumeChart({ data }) {
             <XAxis dataKey="month" {...PG_CHART_CONFIG.axis} />
             <YAxis {...PG_CHART_CONFIG.axis} />
             <Tooltip {...PG_CHART_CONFIG.tooltip} />
-            <Bar dataKey="count" fill="#f47c20" />
+            <Bar dataKey="count" fill={PG_CHART_CONFIG.series.secondary} />
           </BarChart>
         </ResponsiveContainer>
       </div>

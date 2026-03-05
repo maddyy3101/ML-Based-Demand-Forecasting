@@ -12,7 +12,7 @@ export default function UserActivityChart({ data }) {
             <XAxis dataKey="day" {...PG_CHART_CONFIG.axis} />
             <YAxis {...PG_CHART_CONFIG.axis} />
             <Tooltip {...PG_CHART_CONFIG.tooltip} />
-            <Line type="monotone" dataKey="actions" stroke="#22c55e" />
+            <Line type="monotone" dataKey="actions" stroke={PG_CHART_CONFIG.series.secondary} />
           </LineChart>
         </ResponsiveContainer>
       </div>

@@ -10,10 +10,10 @@ function parseError(err) {
 }
 
 function cardStyle(item) {
-  if (item.stockStatus === "OVERSTOCK") return { borderColor: "#a78bfa66", background: "#a78bfa14" };
-  if (item.urgencyLevel === "HIGH") return { borderColor: "#ef444466", background: "#ef444414" };
-  if (item.urgencyLevel === "MEDIUM") return { borderColor: "#f59e0b66", background: "#f59e0b14" };
-  return { borderColor: "#22c55e66", background: "#22c55e14" };
+  if (item.stockStatus === "OVERSTOCK") return { borderColor: "rgba(202, 211, 223, 0.48)", background: "rgba(202, 211, 223, 0.12)" };
+  if (item.urgencyLevel === "HIGH") return { borderColor: "rgba(245, 247, 250, 0.5)", background: "rgba(245, 247, 250, 0.12)" };
+  if (item.urgencyLevel === "MEDIUM") return { borderColor: "rgba(169, 178, 191, 0.5)", background: "rgba(169, 178, 191, 0.12)" };
+  return { borderColor: "rgba(122, 132, 147, 0.5)", background: "rgba(122, 132, 147, 0.12)" };
 }
 
 function meterColor(item) {
@@ -137,7 +137,7 @@ export default function ProcurementRecommendations() {
               <span>Current Stock</span>
               <span>{item.currentStock} {item.unitLabel}</span>
             </div>
-            <div className="h-2 rounded-full mt-1 bg-[#0b1730] border border-[var(--border)] overflow-hidden">
+            <div className="h-2 rounded-full mt-1 bg-[rgba(18,20,26,0.7)] border border-[var(--border)] overflow-hidden">
               <div
                 className="h-full transition-all duration-500"
                 style={{ width: `${stockFill(item)}%`, background: meterColor(item) }}

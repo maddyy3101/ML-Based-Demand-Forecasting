@@ -21,9 +21,9 @@ export default function MovementTimelineChart({ data }) {
             <XAxis dataKey="day" {...PG_CHART_CONFIG.axis} />
             <YAxis {...PG_CHART_CONFIG.axis} />
             <Tooltip {...PG_CHART_CONFIG.tooltip} />
-            <Bar dataKey="receipt" fill="#22c55e" />
-            <Bar dataKey="deployment" fill="#ef4444" />
-            <Line type="monotone" dataKey="net" stroke="#4f8ef7" />
+            <Bar dataKey="receipt" fill={PG_CHART_CONFIG.series.secondary} />
+            <Bar dataKey="deployment" fill={PG_CHART_CONFIG.series.quaternary} />
+            <Line type="monotone" dataKey="net" stroke={PG_CHART_CONFIG.series.primary} />
           </ComposedChart>
         </ResponsiveContainer>
       </div>
