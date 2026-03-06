@@ -62,8 +62,9 @@ export default function UiEffects() {
     let rafId = null;
 
     const updateCursor = () => {
-      ringX += (mouseX - ringX) * 0.17;
-      ringY += (mouseY - ringY) * 0.17;
+      // Slightly faster follow response while keeping smooth trailing.
+      ringX += (mouseX - ringX) * 0.26;
+      ringY += (mouseY - ringY) * 0.26;
       dot.style.transform = `translate3d(${mouseX}px, ${mouseY}px, 0) scale(${dotScale})`;
       ring.style.transform = `translate3d(${ringX}px, ${ringY}px, 0) scale(${ringScale})`;
       rafId = requestAnimationFrame(updateCursor);

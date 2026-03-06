@@ -740,7 +740,7 @@ p {
   top: 0;
   pointer-events: none;
   z-index: 9999;
-  transition: opacity 0.24s ease, transform 0.2s ease;
+  transition: opacity 0.18s ease, transform 0.08s linear;
 }
 
 .pg-cursor-ring {
