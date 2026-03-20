@@ -22,4 +22,7 @@ export const adminApi = {
     (await axiosClient.delete(`/admin/users/${id}/permanent`)).data,
   systemHealth: async () => (await axiosClient.get("/admin/system-health")).data,
   auditLog: async (params) => (await axiosClient.get("/admin/audit-log", { params })).data,
+  procDocStatus: async () => (await axiosClient.get("/admin/procdoc/status")).data,
+  authenticateProcDocKey: async (payload) =>
+    (await axiosClient.post("/admin/procdoc/authenticate", payload)).data,
 };

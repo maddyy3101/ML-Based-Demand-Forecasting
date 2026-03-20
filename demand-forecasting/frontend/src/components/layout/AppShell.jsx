@@ -1,5 +1,6 @@
 import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
+import Chatbot from "../shared/Chatbot";
 
 export default function AppShell({ title, subtitle, children }) {
   return (
@@ -15,6 +16,7 @@ export default function AppShell({ title, subtitle, children }) {
           </div>
         </div>
       </div>
+      <Chatbot />
     </div>
   );
 }

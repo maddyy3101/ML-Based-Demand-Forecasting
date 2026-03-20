@@ -15,6 +15,15 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
+    private static final String[] PUBLIC_PATH_PREFIXES = {
+            "/api/v1/auth/login",
+            "/api/v1/health",
+            "/api/v1/chatbot",
+            "/actuator",
+            "/v3/api-docs",
+            "/swagger-ui"
+    };
+
     private final JwtTokenProvider tokenProvider;
     private final UserDetailsServiceImpl userDetailsService;
 
@@ -49,5 +58,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        for (String prefix : PUBLIC_PATH_PREFIXES) {
+            if (path.startsWith(prefix)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

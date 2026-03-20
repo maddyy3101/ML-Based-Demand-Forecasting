@@ -1,6 +1,8 @@
 package com.powergrid.forecasting.controller;
 
 import com.powergrid.forecasting.dto.admin.RetrainingStatusDto;
+import com.powergrid.forecasting.dto.admin.ProcDocKeyRequest;
+import com.powergrid.forecasting.dto.admin.ProcDocStatusDto;
 import com.powergrid.forecasting.dto.admin.SystemHealthDto;
 import com.powergrid.forecasting.dto.admin.UploadResponseDto;
 import com.powergrid.forecasting.dto.admin.UserSummaryDto;
@@ -94,5 +96,15 @@ public class AdminController {
     @GetMapping("/audit-log")
     public Page<ProcurementForecast> auditLog(@PageableDefault(size = 25) Pageable pageable) {
         return adminService.getAuditLog(pageable);
+    }
+
+    @GetMapping("/procdoc/status")
+    public ProcDocStatusDto procDocStatus() {
+        return adminService.getProcDocStatus();
+    }
+
+    @PostMapping("/procdoc/authenticate")
+    public ProcDocStatusDto authenticateProcDoc(@Valid @RequestBody ProcDocKeyRequest request) {
+        return adminService.authenticateProcDocKey(request.apiKey());
     }
 }

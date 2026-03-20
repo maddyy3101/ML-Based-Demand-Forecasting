@@ -9,6 +9,7 @@ import ModelManagement from "./pages/admin/ModelManagement";
 import UserManagement from "./pages/admin/UserManagement";
 import AuditLog from "./pages/admin/AuditLog";
 import SystemHealth from "./pages/admin/SystemHealth";
+import ProcDoc from "./pages/admin/ProcDoc";
 
 import ProcurementLayout from "./pages/procurement/ProcurementLayout";
 import ProcurementDashboard from "./pages/procurement/ProcurementDashboard";
@@ -44,6 +45,7 @@ export default function App() {
           <Route path="system-health" element={<SystemHealth />} />
           <Route path="dataset-upload" element={<DatasetUpload />} />
           <Route path="model-management" element={<ModelManagement />} />
+          <Route path="procdoc" element={<ProcDoc />} />
           <Route path="users" element={<UserManagement />} />
           <Route path="audit-log" element={<AuditLog />} />
         </Route>

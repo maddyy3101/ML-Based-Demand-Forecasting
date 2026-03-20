@@ -34,14 +34,18 @@ export function AuthProvider({ children }) {
     setLoading(true);
     try {
       const data = await authApi.login(payload);
-      setToken(data.token);
-      setUser({
+      const nextUser = {
         username: data.username,
         role: data.role,
         userId: data.userId,
         assignedRegion: data.assignedRegion,
         employeeId: data.employeeId,
-      });
+      };
+      // Persist auth immediately so API calls right after login carry the token.
+      localStorage.setItem(TOKEN_KEY, data.token);
+      localStorage.setItem(USER_KEY, JSON.stringify(nextUser));
+      setToken(data.token);
+      setUser(nextUser);
       return data;
     } finally {
       setLoading(false);
@@ -60,6 +64,8 @@ export function AuthProvider({ children }) {
   };
 
   const logout = () => {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
     setToken(null);
     setUser(null);
   };

@@ -39,6 +39,13 @@ ml:
     base-url: ${ML_API_BASE_URL:http://127.0.0.1:5001}
     timeout-seconds: 20
 
+# Chatbot Groq API Configuration
+# Injected via environment variable GROQ_API_KEY
+groq:
+  api:
+    key: ${GROQ_API_KEY:}
+    model: llama-3.3-70b-versatile
+
 jwt:
   secret: "PowerGrid-256bit-JWT-Secret-Change-In-Production-PS25193!"
   expiration-ms: 86400000

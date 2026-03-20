@@ -2,6 +2,7 @@ package com.powergrid.forecasting.service;
 
 import com.powergrid.forecasting.client.MlApiClient;
 import com.powergrid.forecasting.dto.admin.RetrainingStatusDto;
+import com.powergrid.forecasting.dto.admin.ProcDocStatusDto;
 import com.powergrid.forecasting.dto.admin.SystemHealthDto;
 import com.powergrid.forecasting.dto.admin.UploadResponseDto;
 import com.powergrid.forecasting.dto.admin.UserSummaryDto;
@@ -77,6 +78,7 @@ public class AdminService {
     private final RetrainingExecutorService retrainingExecutorService;
     private final MlApiClient mlApiClient;
     private final DataSource dataSource;
+    private final ChatbotService chatbotService;
 
     public AdminService(
             @Value("${file.upload-dir:./uploads}") String uploadDir,
@@ -88,7 +90,8 @@ public class AdminService {
             AuthService authService,
             RetrainingExecutorService retrainingExecutorService,
             MlApiClient mlApiClient,
-            DataSource dataSource
+            DataSource dataSource,
+            ChatbotService chatbotService
     ) {
         this.uploadDir = Path.of(uploadDir);
         this.retrainingJobRepository = retrainingJobRepository;
@@ -100,6 +103,7 @@ public class AdminService {
         this.retrainingExecutorService = retrainingExecutorService;
         this.mlApiClient = mlApiClient;
         this.dataSource = dataSource;
+        this.chatbotService = chatbotService;
     }
 
     @Transactional
@@ -253,6 +257,14 @@ public class AdminService {
 
     public Page<ProcurementForecast> getAuditLog(Pageable pageable) {
         return forecastRepository.findAllByOrderByCreatedAtDesc(pageable);
+    }
+
+    public ProcDocStatusDto getProcDocStatus() {
+        return chatbotService.getProcDocStatus();
+    }
+
+    public ProcDocStatusDto authenticateProcDocKey(String apiKey) {
+        return chatbotService.authenticateAndUseApiKey(apiKey);
     }
 
     private HeaderCheck validateHeaderAndCountRows(MultipartFile file) throws IOException {

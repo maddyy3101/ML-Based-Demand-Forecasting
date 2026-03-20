@@ -8,6 +8,7 @@ const navConfig = {
     { label: "System Health", to: "/admin/system-health" },
     { label: "Dataset Upload", to: "/admin/dataset-upload" },
     { label: "Model Management", to: "/admin/model-management" },
+    { label: "ProcDoc", to: "/admin/procdoc" },
     { label: "User Management", to: "/admin/users" },
     { label: "Audit Log", to: "/admin/audit-log" },
   ],
