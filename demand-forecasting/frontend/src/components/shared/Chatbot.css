@@ -6,6 +6,8 @@
   display: flex;
   flex-direction: column-reverse;
   align-items: flex-start;
+  /* Prevent invisible container area from blocking underlying page clicks. */
+  pointer-events: none;
 }
 
 .pg-chatbot-fab {
@@ -22,6 +24,7 @@
   outline: none;
   box-shadow: 0 10px 26px rgba(32, 43, 122, 0.5);
   transition: transform 220ms ease, background-color 220ms ease, box-shadow 220ms ease;
+  pointer-events: auto;
 }
 
 .pg-chatbot-fab:hover {

@@ -1,0 +1,541 @@
+.cmdiq-login-page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  width: 100%;
+  display: flex;
+  align-items: stretch;
+  background-color: #0d1117;
+}
+
+.cmdiq-login-shell {
+  width: 100%;
+  min-height: 100%;
+  display: flex;
+}
+
+.cmdiq-login-outer-card {
+  width: 100%;
+  min-height: calc(100vh - 24px);
+  min-height: calc(100dvh - 24px);
+}
+
+.cmdiq-login-outer-card:fullscreen,
+.cmdiq-login-outer-card:-webkit-full-screen {
+  border-radius: 0;
+  max-width: 100%;
+}
+
+.cmdiq-login-stage {
+  flex: 1 1 auto;
+  min-height: 100%;
+  height: 100%;
+  display: flex;
+  gap: 0;
+}
+
+.cmdiq-login-grid {
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  position: relative;
+  z-index: 1;
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  overflow: hidden;
+  background: linear-gradient(176deg, rgba(14, 18, 24, 0.66), rgba(24, 30, 38, 0.5));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.cmdiq-left-panel {
+  flex: 1 1 55%;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  position: relative;
+  padding: 44px 52px;
+  overflow: hidden;
+}
+
+.cmdiq-left-content {
+  position: relative;
+  z-index: 2;
+}
+
+.cmdiq-bg-animations,
+.cmdiq-bg-animations * {
+  pointer-events: none;
+}
+
+.cmdiq-bg-animations {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.cmdiq-grid-lines {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 36px 36px;
+}
+
+.cmdiq-network-lines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.cmdiq-network-lines line {
+  stroke: rgba(231, 238, 247, 0.14);
+  stroke-width: 1;
+}
+
+.cmdiq-node {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1px solid rgba(217, 223, 233, 0.48);
+  background: transparent;
+  transform-origin: center;
+  animation: cmdiq-node-pulse 3.2s ease-out infinite;
+}
+
+.cmdiq-chart-silhouette {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 28px;
+  width: 100%;
+  height: 170px;
+}
+
+.cmdiq-chart-silhouette polyline {
+  fill: none;
+  stroke: rgba(222, 229, 238, 0.28);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1600;
+  stroke-dashoffset: 1600;
+  animation: cmdiq-chart-draw 4s ease-in-out infinite;
+}
+
+.cmdiq-logo-lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cmdiq-logo-mark {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.09);
+  display: grid;
+  place-items: center;
+}
+
+.cmdiq-logo-mark svg {
+  width: 18px;
+  height: 18px;
+  fill: var(--text-1);
+}
+
+.cmdiq-logo-wordmark {
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.cmdiq-logo-subline {
+  margin-top: 3px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+
+.cmdiq-hero {
+  margin-top: 30px;
+}
+
+.cmdiq-title {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-family: "Sora", sans-serif;
+  font-size: clamp(2.2rem, 4.7vw, 4.25rem);
+  line-height: 0.98;
+  letter-spacing: -0.03em;
+  color: #f8fafc;
+}
+
+.cmdiq-title-word {
+  display: block;
+}
+
+.cmdiq-tagline {
+  margin: 16px 0 0;
+  font-size: 0.96rem;
+  color: var(--text-2);
+}
+
+.cmdiq-stats-row {
+  margin-top: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cmdiq-stat-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(19, 24, 31, 0.74);
+  color: var(--text-1);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.cmdiq-stat-divider {
+  width: 1px;
+  height: 12px;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.cmdiq-capability-grid {
+  margin-top: 48px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.cmdiq-capability-card {
+  border-left: 2px solid rgba(217, 223, 233, 0.45);
+  border-radius: 14px;
+  padding: 14px 16px;
+  transition: transform 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.cmdiq-capability-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.42);
+  box-shadow: 0 12px 22px rgba(0, 0, 0, 0.3);
+}
+
+.cmdiq-capability-icon {
+  width: 20px;
+  height: 20px;
+  color: rgba(225, 232, 242, 0.9);
+}
+
+.cmdiq-capability-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  fill: currentColor;
+}
+
+.cmdiq-capability-card h3 {
+  margin: 10px 0 0;
+  font-size: 14px;
+  color: #f8fafc;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.cmdiq-capability-card p {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--text-2);
+  line-height: 1.45;
+}
+
+.cmdiq-right-panel {
+  flex: 0 0 45%;
+  min-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 44px 36px;
+  background-color: rgba(10, 14, 26, 0.36);
+}
+
+.cmdiq-login-card {
+  width: 100%;
+  max-width: 480px;
+  position: relative;
+  border-radius: 16px;
+  padding: 36px;
+}
+
+.cmdiq-login-card h2 {
+  margin: 0;
+  color: #f1f5f9;
+  font-family: "Sora", sans-serif;
+  font-size: 1.75rem;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.cmdiq-form-subtitle {
+  margin: 8px 0 0;
+  color: var(--text-2);
+  font-size: 0.92rem;
+}
+
+.cmdiq-role-tabs {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  padding: 4px;
+  border-radius: 10px;
+  background: rgba(18, 23, 30, 0.74);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.cmdiq-role-tab {
+  border: 1px solid transparent;
+  height: 36px;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease, transform 120ms ease;
+}
+
+.cmdiq-role-tab:hover {
+  color: var(--text-1);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.cmdiq-role-tab.is-active {
+  background: linear-gradient(180deg, rgba(248, 250, 253, 0.95), rgba(219, 224, 232, 0.9));
+  color: #0f1218;
+  border-color: rgba(255, 255, 255, 0.72);
+}
+
+.cmdiq-form-fields {
+  margin-top: 18px;
+  display: grid;
+  gap: 14px;
+}
+
+.cmdiq-input-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 11px;
+  color: var(--text-2);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.cmdiq-input {
+  height: 44px;
+}
+
+.cmdiq-input:focus {
+  border-color: rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 0 3px rgba(206, 214, 225, 0.18);
+}
+
+.cmdiq-form-error {
+  margin-top: 12px;
+  color: #f87171;
+  font-size: 0.86rem;
+}
+
+.cmdiq-signin-btn {
+  margin-top: 18px;
+  width: 100%;
+  height: 46px;
+}
+
+.cmdiq-signin-btn:disabled {
+  opacity: 0.75;
+  cursor: not-allowed;
+}
+
+.cmdiq-demo-box {
+  margin-top: 18px;
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.cmdiq-demo-toggle {
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  color: var(--text-2);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.cmdiq-demo-list {
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.cmdiq-demo-card {
+  border-radius: 10px;
+  color: var(--text-1);
+  padding: 10px 11px;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 140ms ease, background-color 140ms ease;
+}
+
+.cmdiq-demo-card:hover {
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
+.cmdiq-demo-creds {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes cmdiq-node-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.45;
+  }
+  70% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+
+@keyframes cmdiq-chart-draw {
+  0% {
+    stroke-dashoffset: 1600;
+  }
+  45%,
+  70% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: -1600;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cmdiq-word-a {
+    opacity: 0;
+    animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards;
+  }
+
+  .cmdiq-word-b {
+    opacity: 0;
+    animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.25s forwards;
+  }
+
+  .cmdiq-tagline,
+  .cmdiq-stats-row {
+    opacity: 0;
+    animation: fadeUp 0.4s ease 0.5s forwards;
+  }
+
+  .cmdiq-capability-card {
+    opacity: 0;
+    animation: fadeUp 0.45s ease forwards;
+    animation-delay: calc(0.7s + (var(--card-index, 0) * 0.05s));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cmdiq-bg-animations *,
+  .cmdiq-bg-animations {
+    animation: none !important;
+  }
+}
+
+@media (max-width: 1200px) {
+  .cmdiq-login-grid {
+    flex-direction: column;
+    min-height: 100%;
+  }
+
+  .cmdiq-left-panel,
+  .cmdiq-right-panel {
+    flex: 1 1 auto;
+    padding: 28px;
+  }
+
+  .cmdiq-capability-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-top: 28px;
+  }
+}
+
+@media (max-width: 700px) {
+  .cmdiq-login-stage {
+    padding: 12px;
+  }
+
+  .cmdiq-left-panel,
+  .cmdiq-right-panel {
+    padding: 20px;
+  }
+
+  .cmdiq-logo-wordmark {
+    font-size: 17px;
+  }
+
+  .cmdiq-login-card {
+    padding: 20px;
+  }
+
+  .cmdiq-role-tabs {
+    grid-template-columns: 1fr;
+  }
+
+  .cmdiq-capability-grid {
+    grid-template-columns: 1fr;
+  }
+}
