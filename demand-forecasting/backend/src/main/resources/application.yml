@@ -44,7 +44,13 @@ ml:
 groq:
   api:
     key: ${GROQ_API_KEY:}
-    model: llama-3.3-70b-versatile
+    model: ${GROQ_MODEL:llama-3.3-70b-versatile}
+
+# Optional Gemini fallback provider (enabled when GEMINI_API_KEY is set)
+gemini:
+  api:
+    key: ${GEMINI_API_KEY:}
+    model: ${GEMINI_MODEL:gemini-2.0-flash}
 
 jwt:
   secret: "PowerGrid-256bit-JWT-Secret-Change-In-Production-PS25193!"

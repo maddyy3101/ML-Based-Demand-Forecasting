@@ -10,3 +10,12 @@ build_backup/
 demand-forecasting/backend/target/
 demand-forecasting/ml/__pycache__/
 demand-forecasting/ml/.venv/
+
+# local environment secrets
+.env
+.env.local
+.env.*
+!.env.example
+
+# runtime logs
+logs/

@@ -20,6 +20,7 @@ STARTUP_TIMEOUT_SECS="${STARTUP_TIMEOUT_SECS:-180}"
 RESET_LOGS_ON_EXIT="${RESET_LOGS_ON_EXIT:-true}"
 AUTO_START_POSTGRES="${AUTO_START_POSTGRES:-true}"
 RUN_DB_BOOTSTRAP_SQL="${RUN_DB_BOOTSTRAP_SQL:-true}"
+ENV_FILE="${ENV_FILE:-}"
 
 POSTGRES_HOST="${POSTGRES_HOST:-127.0.0.1}"
 POSTGRES_PORT="${POSTGRES_PORT:-5432}"
@@ -55,6 +56,41 @@ ensure_postgres_cli_path() {
 
   if [ -n "$pg_bin" ] && [[ ":$PATH:" != *":$pg_bin:"* ]]; then
     export PATH="$pg_bin:$PATH"
+  fi
+}
+
+load_local_env() {
+  local env_path="${ENV_FILE:-}"
+
+  if [ -z "$env_path" ]; then
+    if [ -f "$ROOT_DIR/.env.local" ]; then
+      env_path="$ROOT_DIR/.env.local"
+    elif [ -f "$ROOT_DIR/.env" ]; then
+      env_path="$ROOT_DIR/.env"
+    fi
+  fi
+
+  if [ -n "$env_path" ]; then
+    if [ ! -f "$env_path" ]; then
+      warn "ENV_FILE is set but file does not exist: $env_path"
+    else
+      # Export everything from env file for child processes (backend/ml/frontend).
+      set -a
+      # shellcheck disable=SC1090
+      . "$env_path"
+      set +a
+      info "Loaded environment config from: $env_path"
+    fi
+  else
+    warn "No env file found (.env.local or .env)."
+  fi
+
+  if [ -n "${GROQ_API_KEY:-}" ]; then
+    info "ProcBot API key loaded from environment (Groq)."
+  elif [ -n "${GEMINI_API_KEY:-}" ]; then
+    info "ProcBot API key loaded from environment (Gemini)."
+  else
+    warn "ProcBot API key not set. Configure GROQ_API_KEY or GEMINI_API_KEY in env."
   fi
 }
 
@@ -698,6 +734,7 @@ main() {
   require_command mvn
   require_command npm
   initialize_logs
+  load_local_env
   resolve_backend_profile || exit 1
   bootstrap_postgres_sql || exit 1
 

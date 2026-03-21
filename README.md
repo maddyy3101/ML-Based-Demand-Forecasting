@@ -4,6 +4,18 @@ Demand forecasting application with:
 - `demand-forecasting/ml` (Flask inference API)
 - `demand-forecasting/backend` (Spring Boot backend API)
 
+## Secure API Key Setup (No Manual ProcDoc Entry Each Run)
+
+1. Create a local env file:
+   - `cp .env.example .env.local`
+2. Put your provider key in `.env.local`:
+   - `GROQ_API_KEY=...` (recommended), or `GEMINI_API_KEY=...`
+3. Start the system normally:
+   - `./startSystem.sh`
+
+`startSystem.sh` auto-loads `.env.local` (or `.env`) and exports values to backend.
+Do not commit `.env.local` or real keys.
+
 ## High-value APIs implemented
 
 - `POST /api/v1/forecasts/async`
