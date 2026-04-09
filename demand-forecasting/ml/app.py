@@ -356,6 +356,20 @@ def create_app() -> Flask:
 
         return jsonify({"status": "started", "message": "Retraining initiated"})
 
+    @app.post("/retrain/upload")
+    def retrain_upload():
+        csv_file = request.files.get("file")
+        if csv_file is None:
+            return jsonify({"error": "file is required"}), 400
+
+        dataset_path = Path(__file__).resolve().parent / DEFAULT_DATASET
+        csv_file.save(dataset_path)
+
+        thread = threading.Thread(target=run_retraining, args=(str(dataset_path),), daemon=True)
+        thread.start()
+
+        return jsonify({"status": "started", "message": "Dataset received and retraining initiated"})
+
     return app
 
 

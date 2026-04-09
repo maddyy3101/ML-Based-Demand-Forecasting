@@ -53,8 +53,12 @@ gemini:
     model: ${GEMINI_MODEL:gemini-2.0-flash}
 
 jwt:
-  secret: "PowerGrid-256bit-JWT-Secret-Change-In-Production-PS25193!"
+  secret: ${JWT_SECRET:PowerGrid-256bit-JWT-Secret-Change-In-Production-PS25193!}
   expiration-ms: 86400000
+
+powergrid:
+  cors:
+    allowed-origin-patterns: ${POWERGRID_CORS_ALLOWED_ORIGIN_PATTERNS:http://localhost:5173,http://127.0.0.1:5173,http://localhost:4173,http://127.0.0.1:4173,https://*.vercel.app}
 
 file:
   upload-dir: ./uploads

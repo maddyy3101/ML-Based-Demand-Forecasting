@@ -1,0 +1,88 @@
+databases:
+  - name: powergrid-postgres
+    databaseName: powergrid
+    user: powergrid
+    plan: free
+
+services:
+  - type: pserv
+    name: powergrid-ml-api
+    env: docker
+    rootDir: demand-forecasting
+    dockerfilePath: ./Dockerfile
+    plan: starter
+    healthCheckPath: /health
+    disk:
+      name: powergrid-ml-models
+      mountPath: /app/models
+      sizeGB: 2
+    envVars:
+      - key: MODEL_DIR
+        value: /app/models
+      - key: PYTHONDONTWRITEBYTECODE
+        value: "1"
+      - key: PYTHONUNBUFFERED
+        value: "1"
+
+  - type: web
+    name: powergrid-backend-api
+    env: docker
+    rootDir: demand-forecasting/backend
+    dockerfilePath: ./Dockerfile
+    plan: starter
+    healthCheckPath: /api/v1/health/
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: docker
+      - key: DB_HOST
+        fromDatabase:
+          name: powergrid-postgres
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: powergrid-postgres
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: powergrid-postgres
+          property: database
+      - key: SPRING_DATASOURCE_URL
+        value: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+      - key: SPRING_DATASOURCE_USERNAME
+        fromDatabase:
+          name: powergrid-postgres
+          property: user
+      - key: SPRING_DATASOURCE_PASSWORD
+        fromDatabase:
+          name: powergrid-postgres
+          property: password
+      - key: ML_SERVICE_HOST
+        fromService:
+          type: pserv
+          name: powergrid-ml-api
+          property: host
+      - key: ML_SERVICE_PORT
+        fromService:
+          type: pserv
+          name: powergrid-ml-api
+          property: port
+      - key: ML_API_BASE_URL
+        value: http://${ML_SERVICE_HOST}:${ML_SERVICE_PORT}
+      - key: FILE_UPLOAD_DIR
+        value: /var/data/uploads
+      - key: JWT_SECRET
+        generateValue: true
+      - key: POWERGRID_SEED_RESET_DEFAULT_PASSWORDS
+        value: "false"
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_MODEL
+        value: llama-3.3-70b-versatile
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.0-flash
+    disk:
+      name: powergrid-backend-data
+      mountPath: /var/data
+      sizeGB: 2

@@ -13,6 +13,7 @@ COPY --from=builder /opt/venv /opt/venv
 COPY ml/app.py ./app.py
 COPY ml/demand_forecasting_train.py ./demand_forecasting_train.py
 COPY ml/powergrid_material_dataset.csv ./powergrid_material_dataset.csv
+COPY ml/models ./models
 RUN mkdir -p /app/models && chown -R mluser:mluser /app
 
 USER mluser

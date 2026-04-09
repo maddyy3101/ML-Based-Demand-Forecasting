@@ -5,6 +5,8 @@ import com.powergrid.forecasting.client.MlApiClient;
 import com.powergrid.forecasting.entity.RetrainingJob;
 import com.powergrid.forecasting.enums.RetrainingStatus;
 import com.powergrid.forecasting.repository.RetrainingJobRepository;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Map;
 import org.springframework.scheduling.annotation.Async;
@@ -29,13 +31,24 @@ public class RetrainingExecutorService {
 
     @Async
     public void executeRetraining(RetrainingJob job) {
+        executeRetraining(job, null);
+    }
+
+    @Async
+    public void executeRetraining(RetrainingJob job, Path datasetFilePath) {
         try {
             job.setStatus(RetrainingStatus.RUNNING);
             job.setStartedAt(Instant.now());
             job.setLogOutput("Retraining started for dataset: " + job.getDatasetPath());
             retrainingJobRepository.save(job);
 
-            Map<String, Object> retrainResponse = mlApiClient.retrain(job.getDatasetPath());
+            Map<String, Object> retrainResponse;
+            if (datasetFilePath != null) {
+                byte[] datasetBytes = Files.readAllBytes(datasetFilePath);
+                retrainResponse = mlApiClient.retrainWithDataset(datasetBytes, datasetFilePath.getFileName().toString());
+            } else {
+                retrainResponse = mlApiClient.retrain(job.getDatasetPath());
+            }
             Map<String, Object> accuracy = mlApiClient.getAccuracy();
 
             job.setStatus(RetrainingStatus.COMPLETED);

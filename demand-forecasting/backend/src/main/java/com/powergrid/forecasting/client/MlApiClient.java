@@ -6,8 +6,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.stereotype.Component;
+import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 
 @Component
@@ -90,6 +93,25 @@ public class MlApiClient {
                 .retrieve()
                 .bodyToMono(Map.class)
                 .block(Duration.ofSeconds(10));
+    }
+
+    public Map<String, Object> retrainWithDataset(byte[] datasetBytes, String filename) {
+        MultipartBodyBuilder bodyBuilder = new MultipartBodyBuilder();
+        bodyBuilder.part("file", new ByteArrayResource(datasetBytes) {
+                    @Override
+                    public String getFilename() {
+                        return filename;
+                    }
+                })
+                .contentType(MediaType.parseMediaType("text/csv"));
+
+        return webClient.post()
+                .uri("/retrain/upload")
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(BodyInserters.fromMultipartData(bodyBuilder.build()))
+                .retrieve()
+                .bodyToMono(Map.class)
+                .block(Duration.ofSeconds(20));
     }
 
     public Map<String, Object> whatIf(ForecastRequest request) {

@@ -4,6 +4,10 @@ Demand forecasting application with:
 - `demand-forecasting/ml` (Flask inference API)
 - `demand-forecasting/backend` (Spring Boot backend API)
 
+## Deployment
+
+- Vercel + Render deployment guide: [`DEPLOYMENT_VERCEL_RENDER.md`](./DEPLOYMENT_VERCEL_RENDER.md)
+
 ## Secure API Key Setup (No Manual ProcDoc Entry Each Run)
 
 1. Create a local env file:

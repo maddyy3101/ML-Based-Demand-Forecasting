@@ -128,7 +128,7 @@ public class AdminService {
             job.setLogOutput("Dataset uploaded by " + triggeredBy.getUsername());
 
             RetrainingJob saved = retrainingJobRepository.save(job);
-            retrainingExecutorService.executeRetraining(saved);
+            retrainingExecutorService.executeRetraining(saved, activeFile);
 
             return new UploadResponseDto(
                     saved.getId().toString(),
